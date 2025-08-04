@@ -52,7 +52,7 @@ from mlflow.protos.databricks_pb2 import (
     RESOURCE_ALREADY_EXISTS,
     RESOURCE_DOES_NOT_EXIST,
 )
-from mlflow.store.db.db_types import MSSQL, MYSQL
+from mlflow.store.db.db_types import MSSQL, MYSQL, POSTGRES, SQLITE
 from mlflow.store.entities.paged_list import PagedList
 from mlflow.store.tracking import (
     SEARCH_LOGGED_MODEL_MAX_RESULTS_DEFAULT,
@@ -3105,6 +3105,8 @@ def _get_filter_clauses_for_search_traces(filter_string, session, dialect):
     Creates trace attribute filters and subqueries that will be inner-joined
     to SqlTraceInfo to act as multi-clause filters and return them as a tuple.
     """
+    import sqlalchemy as sa
+
     attribute_filters = []
     non_attribute_filters = []
 
@@ -3126,20 +3128,77 @@ def _get_filter_clauses_for_search_traces(filter_string, session, dialect):
                 entity = SqlTraceTag
             elif SearchTraceUtils.is_request_metadata(key_type, comparator):
                 entity = SqlTraceMetadata
+            elif SearchTraceUtils.is_feedback(key_type, comparator):
+                # Handle feedback filtering
+                from mlflow.store.tracking.dbmodels.models import SqlAssessments
+
+                # Build the feedback filter based on value type
+                feedback_filters = [
+                    SqlAssessments.name == key_name,
+                    SqlAssessments.assessment_type == "feedback",
+                ]
+
+                # Different handling based on value type and comparator
+                if isinstance(value, bool):
+                    # Boolean comparison - extract from JSON and compare
+                    json_value = sa.func.json_extract(SqlAssessments.value, "$.value")
+                    if dialect == MYSQL:
+                        # MySQL returns 1/0 for boolean JSON values
+                        bool_val = 1 if value else 0
+                        val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                            sa.cast(json_value, sa.Integer), bool_val
+                        )
+                    else:
+                        # SQLite and PostgreSQL handle boolean JSON values differently
+                        val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                            json_value, "true" if value else "false"
+                        )
+                elif isinstance(value, (int, float)):
+                    # Numeric comparison - extract and cast
+                    json_value = sa.func.json_extract(SqlAssessments.value, "$.value")
+                    numeric_value = sa.cast(json_value, sa.Numeric)
+                    val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                        numeric_value, value
+                    )
+                elif isinstance(value, (list, tuple)):
+                    # IN/NOT IN comparison
+                    json_value = sa.func.json_extract(SqlAssessments.value, "$.value")
+                    val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                        json_value, value
+                    )
+                else:
+                    # String comparison
+                    json_value = sa.func.json_extract(SqlAssessments.value, "$.value")
+                    # Remove quotes from extracted JSON string
+                    if dialect in (SQLITE, POSTGRES):
+                        # SQLite/PostgreSQL json_extract returns quoted strings
+                        json_value = sa.func.trim(json_value, '"')
+                    val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                        json_value, value
+                    )
+
+                feedback_filters.append(val_filter)
+
+                # Create subquery for feedback
+                non_attribute_filters.append(
+                    session.query(SqlAssessments).filter(*feedback_filters).subquery()
+                )
             else:
                 raise MlflowException(
                     f"Invalid search expression type '{key_type}'",
                     error_code=INVALID_PARAMETER_VALUE,
                 )
 
-            key_filter = SearchTraceUtils.get_sql_comparison_func("=", dialect)(
-                entity.key, key_name
-            )
-            val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
-                entity.value, value
-            )
-            non_attribute_filters.append(
-                session.query(entity).filter(key_filter, val_filter).subquery()
-            )
+            if key_type != SearchTraceUtils._FEEDBACK_IDENTIFIER:
+                # Handle non-feedback filters (tags, metadata)
+                key_filter = SearchTraceUtils.get_sql_comparison_func("=", dialect)(
+                    entity.key, key_name
+                )
+                val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                    entity.value, value
+                )
+                non_attribute_filters.append(
+                    session.query(entity).filter(key_filter, val_filter).subquery()
+                )
 
     return attribute_filters, non_attribute_filters

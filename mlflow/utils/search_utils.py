@@ -91,6 +91,22 @@ def _join_in_comparison_tokens(tokens, search_traces=False):
                 else:
                     joined_tokens.extend([first, second, third])
 
+            # feedback with boolean keywords
+            if isinstance(first, Identifier) and "feedback." in first.value:
+                # Peek ahead to check for boolean comparison pattern
+                if (
+                    index + 2 < num_tokens
+                    and non_whitespace_tokens[index + 1].ttype == TokenType.Operator.Comparison
+                    and non_whitespace_tokens[index + 2].match(
+                        ttype=TokenType.Keyword, values=["true", "false"]
+                    )
+                ):
+                    # Consume the next two tokens
+                    (_, second) = next(iterator)
+                    (_, third) = next(iterator)
+                    joined_tokens.append(Comparison(TokenList([first, second, third])))
+                    continue
+
         # Wait until we encounter an identifier token
         if not isinstance(first, Identifier):
             joined_tokens.append(first)
@@ -1607,10 +1623,12 @@ class SearchTraceUtils(SearchUtils):
     # decision if we find a way to support them efficiently.
     VALID_TAG_COMPARATORS = {"!=", "="}
     VALID_STRING_ATTRIBUTE_COMPARATORS = {"!=", "=", "IN", "NOT IN"}
+    VALID_FEEDBACK_COMPARATORS = {"!=", "=", ">", ">=", "<", "<=", "LIKE", "ILIKE", "IN", "NOT IN"}
 
     _REQUEST_METADATA_IDENTIFIER = "request_metadata"
     _TAG_IDENTIFIER = "tag"
     _ATTRIBUTE_IDENTIFIER = "attribute"
+    _FEEDBACK_IDENTIFIER = "feedback"
 
     # These are aliases for the base identifiers
     # e.g. trace.status is equivalent to attribute.status
@@ -1620,7 +1638,12 @@ class SearchTraceUtils(SearchUtils):
         "trace": _ATTRIBUTE_IDENTIFIER,
         "metadata": _REQUEST_METADATA_IDENTIFIER,
     }
-    _IDENTIFIERS = {_TAG_IDENTIFIER, _REQUEST_METADATA_IDENTIFIER, _ATTRIBUTE_IDENTIFIER}
+    _IDENTIFIERS = {
+        _TAG_IDENTIFIER,
+        _REQUEST_METADATA_IDENTIFIER,
+        _ATTRIBUTE_IDENTIFIER,
+        _FEEDBACK_IDENTIFIER,
+    }
     _VALID_IDENTIFIERS = _IDENTIFIERS | set(_ALTERNATE_IDENTIFIERS.keys())
 
     SUPPORT_IN_COMPARISON_ATTRIBUTE_KEYS = {"name", "status", "request_id", "run_id"}
@@ -1664,6 +1687,13 @@ class SearchTraceUtils(SearchUtils):
             lhs = trace.request_metadata.get(key)
         elif cls.is_attribute(type_, key, comparator):
             lhs = getattr(trace, key)
+        elif cls.is_feedback(type_, comparator):
+            # Feedback filtering is not supported in FileStore
+            raise MlflowException(
+                "Feedback filtering is not supported with file-based backend stores. "
+                "Please use a database-backed store (e.g., SQLite) for this functionality.",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
         elif sed.get("type") == cls._TAG_IDENTIFIER:
             lhs = trace.tags.get(key)
         else:
@@ -1719,6 +1749,62 @@ class SearchTraceUtils(SearchUtils):
                 )
             return True
         return False
+
+    @classmethod
+    def is_feedback(cls, key_type, comparator):
+        if key_type == cls._FEEDBACK_IDENTIFIER:
+            # Feedback accepts all comparators for now, validation happens based on value type
+            if comparator not in cls.VALID_FEEDBACK_COMPARATORS:
+                raise MlflowException(
+                    f"Invalid comparator '{comparator}' not one of "
+                    f"'{cls.VALID_FEEDBACK_COMPARATORS}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+            return True
+        return False
+
+    @classmethod
+    def validate_feedback_comparator(cls, comparator, value):
+        """Validate feedback comparator based on the inferred value type."""
+        if isinstance(value, bool):
+            # Boolean values only support = and !=
+            if comparator not in {"=", "!="}:
+                raise MlflowException(
+                    f"Boolean feedback values only support '=' and '!=' comparators, "
+                    f"got '{comparator}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+        elif isinstance(value, (int, float)):
+            # Numeric values support all comparison operators
+            if comparator not in {"=", "!=", ">", ">=", "<", "<="}:
+                raise MlflowException(
+                    f"Numeric feedback values only support comparison operators, "
+                    f"got '{comparator}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+        elif isinstance(value, (list, tuple)):
+            # List/tuple values - check if numeric or string
+            if value and isinstance(value[0], (int, float)):
+                # Numeric lists should not support IN/NOT IN
+                raise MlflowException(
+                    f"Numeric feedback values only support comparison operators, "
+                    f"got '{comparator}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+            # String lists support IN, NOT IN
+            if comparator not in {"IN", "NOT IN"}:
+                raise MlflowException(
+                    f"List values only support 'IN' and 'NOT IN' comparators, got '{comparator}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+        elif isinstance(value, str):
+            # String values support =, !=, LIKE, ILIKE
+            if comparator not in {"=", "!=", "LIKE", "ILIKE"}:
+                raise MlflowException(
+                    f"String feedback values do not support '{comparator}' comparator",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+        return True
 
     @classmethod
     def _valid_entity_type(cls, entity_type):
@@ -1804,6 +1890,45 @@ class SearchTraceUtils(SearchUtils):
                     f"{token.value}",
                     error_code=INVALID_PARAMETER_VALUE,
                 )
+        elif identifier_type == cls._FEEDBACK_IDENTIFIER:
+            # Feedback supports multiple value types with inference
+            if token.value.lower() in ("true", "false") or token.match(
+                ttype=TokenType.Keyword, values=["true", "false"]
+            ):
+                # Boolean value
+                return token.value.lower() == "true"
+            elif token.ttype in cls.STRING_VALUE_TYPES:
+                # String value
+                return cls._strip_quotes(token.value, expect_quoted_value=True)
+            elif isinstance(token, Identifier):
+                # Quoted identifier
+                return cls._strip_quotes(token.value, expect_quoted_value=True)
+            elif isinstance(token, Parenthesis):
+                # List of values - check if it contains numeric values
+                try:
+                    parsed = ast.literal_eval(token.value)
+                    parsed = parsed if isinstance(parsed, tuple) else (parsed,)
+                    # If any value is numeric, we'll validate that IN is not allowed
+                    # for numeric feedback
+                    if parsed and isinstance(parsed[0], (int, float)):
+                        # Return the parsed numeric list - validation will happen
+                        # in validate_feedback_comparator
+                        return parsed
+                except Exception:
+                    pass
+                # Otherwise parse as string list
+                return cls._parse_attribute_lists(token)
+            elif token.ttype in cls.NUMERIC_VALUE_TYPES:
+                # Numeric value
+                if token.ttype == TokenType.Literal.Number.Integer:
+                    return int(token.value)
+                else:  # Float
+                    return float(token.value)
+            else:
+                raise MlflowException(
+                    f"Invalid feedback value type. Got value {token.value}",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
         else:
             # Expected to be either "param" or "metric".
             raise MlflowException(
@@ -1846,6 +1971,11 @@ class SearchTraceUtils(SearchUtils):
         comp = cls._get_identifier(stripped_comparison[0].value, cls.VALID_SEARCH_ATTRIBUTE_KEYS)
         comp["comparator"] = stripped_comparison[1].value
         comp["value"] = cls._get_value(comp.get("type"), comp.get("key"), stripped_comparison[2])
+
+        # Validate feedback comparator based on value type
+        if comp.get("type") == cls._FEEDBACK_IDENTIFIER:
+            cls.validate_feedback_comparator(comp["comparator"], comp["value"])
+
         return comp
 
 

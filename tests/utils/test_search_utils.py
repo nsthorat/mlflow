@@ -676,3 +676,149 @@ def test_pagination(page_token, max_results, matching_runs, expected_next_page_t
 def test_invalid_page_tokens(page_token, error_message):
     with pytest.raises(MlflowException, match=error_message):
         SearchUtils.paginate([], page_token, 1)
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "parsed_filter"),
+    [
+        # Boolean feedback
+        (
+            "feedback.is_correct = true",
+            [{"comparator": "=", "key": "is_correct", "type": "feedback", "value": True}],
+        ),
+        (
+            "feedback.is_correct = false",
+            [{"comparator": "=", "key": "is_correct", "type": "feedback", "value": False}],
+        ),
+        (
+            "feedback.is_correct != true",
+            [{"comparator": "!=", "key": "is_correct", "type": "feedback", "value": True}],
+        ),
+        # Numeric feedback
+        (
+            "feedback.score = 0.95",
+            [{"comparator": "=", "key": "score", "type": "feedback", "value": 0.95}],
+        ),
+        (
+            "feedback.score > 0.5",
+            [{"comparator": ">", "key": "score", "type": "feedback", "value": 0.5}],
+        ),
+        (
+            "feedback.score < 0.5",
+            [{"comparator": "<", "key": "score", "type": "feedback", "value": 0.5}],
+        ),
+        (
+            "feedback.score >= 0.7",
+            [{"comparator": ">=", "key": "score", "type": "feedback", "value": 0.7}],
+        ),
+        (
+            "feedback.score <= 0.3",
+            [{"comparator": "<=", "key": "score", "type": "feedback", "value": 0.3}],
+        ),
+        # String feedback
+        (
+            "feedback.sentiment = 'positive'",
+            [{"comparator": "=", "key": "sentiment", "type": "feedback", "value": "positive"}],
+        ),
+        (
+            'feedback.sentiment = "negative"',
+            [{"comparator": "=", "key": "sentiment", "type": "feedback", "value": "negative"}],
+        ),
+        (
+            "feedback.sentiment != 'neutral'",
+            [{"comparator": "!=", "key": "sentiment", "type": "feedback", "value": "neutral"}],
+        ),
+        (
+            "feedback.sentiment LIKE 'pos%'",
+            [{"comparator": "LIKE", "key": "sentiment", "type": "feedback", "value": "pos%"}],
+        ),
+        (
+            "feedback.category IN ('good', 'excellent')",
+            [
+                {
+                    "comparator": "IN",
+                    "key": "category",
+                    "type": "feedback",
+                    "value": ("good", "excellent"),
+                }
+            ],
+        ),
+        (
+            "feedback.category NOT IN ('bad', 'poor')",
+            [
+                {
+                    "comparator": "NOT IN",
+                    "key": "category",
+                    "type": "feedback",
+                    "value": ("bad", "poor"),
+                }
+            ],
+        ),
+    ],
+)
+def test_trace_search_filter_with_feedback(filter_string, parsed_filter):
+    from mlflow.utils.search_utils import SearchTraceUtils
+
+    assert SearchTraceUtils.parse_search_filter_for_search_traces(filter_string) == parsed_filter
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "error_pattern"),
+    [
+        # Invalid comparators for boolean values
+        ("feedback.is_correct > true", "Boolean feedback values only support '=' and '!='"),
+        ("feedback.is_correct < false", "Boolean feedback values only support '=' and '!='"),
+        ("feedback.is_correct >= true", "Boolean feedback values only support '=' and '!='"),
+        ("feedback.is_correct <= false", "Boolean feedback values only support '=' and '!='"),
+        # Invalid comparators for numeric values
+        (
+            "feedback.score IN (0.5, 0.6)",
+            "Numeric feedback values only support comparison operators",
+        ),
+        # Invalid comparators for string values
+        ("feedback.sentiment > 'positive'", "String feedback values do not support '>'"),
+        ("feedback.sentiment < 'negative'", "String feedback values do not support '<'"),
+        ("feedback.sentiment >= 'positive'", "String feedback values do not support '>='"),
+        ("feedback.sentiment <= 'negative'", "String feedback values do not support '<='"),
+    ],
+)
+def test_trace_search_filter_feedback_invalid_comparators(filter_string, error_pattern):
+    from mlflow.utils.search_utils import SearchTraceUtils
+
+    with pytest.raises(MlflowException, match=error_pattern):
+        SearchTraceUtils.parse_search_filter_for_search_traces(filter_string)
+
+
+def test_trace_search_filter_feedback_value_type_inference():
+    """Test that feedback value types are correctly inferred."""
+    from mlflow.utils.search_utils import SearchTraceUtils
+
+    # Test boolean inference
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces("feedback.test = true")
+    assert parsed[0]["value"] is True
+    assert isinstance(parsed[0]["value"], bool)
+
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces("feedback.test = false")
+    assert parsed[0]["value"] is False
+    assert isinstance(parsed[0]["value"], bool)
+
+    # Test numeric inference
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces("feedback.test = 42")
+    assert parsed[0]["value"] == 42
+    assert isinstance(parsed[0]["value"], int)
+
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces("feedback.test = 3.14")
+    assert parsed[0]["value"] == 3.14
+    assert isinstance(parsed[0]["value"], float)
+
+    # Test string inference
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces("feedback.test = 'hello'")
+    assert parsed[0]["value"] == "hello"
+    assert isinstance(parsed[0]["value"], str)
+
+    # Test list inference for IN operator
+    parsed = SearchTraceUtils.parse_search_filter_for_search_traces(
+        "feedback.test IN ('a', 'b', 'c')"
+    )
+    assert parsed[0]["value"] == ("a", "b", "c")
+    assert isinstance(parsed[0]["value"], tuple)

@@ -4588,6 +4588,128 @@ def test_search_traces_pagination_tie_breaker(store):
     assert [t.trace_id for t in traces] == ["tr-4"]
 
 
+@pytest.mark.parametrize(
+    ("filter_string", "expected_ids"),
+    [
+        # Boolean feedback
+        ("feedback.is_correct = true", ["tr-0", "tr-2"]),
+        ("feedback.is_correct = false", ["tr-1"]),
+        ("feedback.is_correct != true", ["tr-1"]),
+        # Numeric feedback
+        ("feedback.score = 0.9", ["tr-0"]),
+        ("feedback.score > 0.5", ["tr-0", "tr-2"]),
+        ("feedback.score < 0.5", ["tr-1"]),
+        ("feedback.score >= 0.7", ["tr-0", "tr-2"]),
+        ("feedback.score <= 0.3", ["tr-1"]),
+        ("feedback.score != 0.3", ["tr-0", "tr-2"]),
+        # String feedback
+        ("feedback.sentiment = 'positive'", ["tr-0", "tr-2"]),
+        ("feedback.sentiment = 'negative'", ["tr-1"]),
+        ("feedback.sentiment != 'positive'", ["tr-1"]),
+        ("feedback.sentiment LIKE 'pos%'", ["tr-0", "tr-2"]),
+        ("feedback.sentiment IN ('positive', 'neutral')", ["tr-0", "tr-2"]),
+        ("feedback.sentiment NOT IN ('negative')", ["tr-0", "tr-2"]),
+        # Combining with other filters
+        ("feedback.is_correct = true AND status = 'OK'", ["tr-0"]),
+        ("feedback.score > 0.5 AND name = 'bbb'", ["tr-2"]),
+    ],
+)
+def test_search_traces_with_feedback_filter(store, filter_string, expected_ids):
+    from mlflow.entities import AssessmentSource, AssessmentSourceType
+
+    # Create experiments and traces
+    exp1 = store.create_experiment("exp1")
+    exp2 = store.create_experiment("exp2")
+
+    # Create traces
+    _create_trace(
+        store, "tr-0", exp1, request_time=0, state=TraceState.OK, tags={"mlflow.traceName": "aaa"}
+    )
+    _create_trace(
+        store,
+        "tr-1",
+        exp1,
+        request_time=1,
+        state=TraceState.ERROR,
+        tags={"mlflow.traceName": "aaa"},
+    )
+    _create_trace(
+        store,
+        "tr-2",
+        exp1,
+        request_time=2,
+        state=TraceState.STATE_UNSPECIFIED,
+        tags={"mlflow.traceName": "bbb"},
+    )
+    _create_trace(
+        store, "tr-3", exp2, request_time=3, state=TraceState.OK, tags={"mlflow.traceName": "ccc"}
+    )
+
+    # Add feedback to traces
+    source = AssessmentSource(source_type=AssessmentSourceType.LLM_JUDGE, source_id="gpt-4")
+
+    # tr-0: is_correct=true, score=0.9, sentiment='positive'
+    store.create_assessment(Feedback(name="is_correct", value=True, trace_id="tr-0", source=source))
+    store.create_assessment(Feedback(name="score", value=0.9, trace_id="tr-0", source=source))
+    store.create_assessment(
+        Feedback(name="sentiment", value="positive", trace_id="tr-0", source=source)
+    )
+
+    # tr-1: is_correct=false, score=0.3, sentiment='negative'
+    store.create_assessment(
+        Feedback(name="is_correct", value=False, trace_id="tr-1", source=source)
+    )
+    store.create_assessment(Feedback(name="score", value=0.3, trace_id="tr-1", source=source))
+    store.create_assessment(
+        Feedback(name="sentiment", value="negative", trace_id="tr-1", source=source)
+    )
+
+    # tr-2: is_correct=true, score=0.7, sentiment='positive'
+    store.create_assessment(Feedback(name="is_correct", value=True, trace_id="tr-2", source=source))
+    store.create_assessment(Feedback(name="score", value=0.7, trace_id="tr-2", source=source))
+    store.create_assessment(
+        Feedback(name="sentiment", value="positive", trace_id="tr-2", source=source)
+    )
+
+    # tr-3: no feedback (in different experiment)
+
+    # Search with filter
+    trace_infos, _ = store.search_traces(
+        experiment_ids=[exp1],
+        filter_string=filter_string,
+        max_results=10,
+    )
+    actual_ids = [trace_info.trace_id for trace_info in trace_infos]
+    assert actual_ids == expected_ids
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "error"),
+    [
+        # Invalid comparators for boolean values
+        ("feedback.is_correct > true", "Boolean feedback values only support '=' and '!='"),
+        ("feedback.is_correct < false", "Boolean feedback values only support '=' and '!='"),
+        # Invalid comparators for numeric values
+        ("feedback.score LIKE '0.5'", "Numeric feedback values only support comparison operators"),
+        (
+            "feedback.score IN (0.5, 0.6)",
+            "Numeric feedback values only support comparison operators",
+        ),
+        # Invalid comparators for string values
+        ("feedback.sentiment > 'positive'", "String feedback values do not support '>'"),
+        ("feedback.sentiment < 'negative'", "String feedback values do not support '<'"),
+    ],
+)
+def test_search_traces_with_invalid_feedback_filter(store, filter_string, error):
+    exp1 = store.create_experiment("exp1")
+
+    with pytest.raises(MlflowException, match=error):
+        store.search_traces(
+            experiment_ids=[exp1],
+            filter_string=filter_string,
+        )
+
+
 def test_set_and_delete_tags(store: SqlAlchemyStore):
     exp1 = store.create_experiment("exp1")
     trace_id = "tr-123"
