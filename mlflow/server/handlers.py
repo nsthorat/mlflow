@@ -91,6 +91,7 @@ from mlflow.protos.model_registry_pb2 import (
     UpdateRegisteredModel,
 )
 from mlflow.protos.service_pb2 import (
+    CalculateTraceFilterCorrelation,
     CreateAssessment,
     CreateExperiment,
     CreateLoggedModel,
@@ -2626,6 +2627,43 @@ def _delete_traces():
 
 @catch_mlflow_exception
 @_disable_if_artifacts_only
+def _calculate_trace_filter_correlation():
+    """
+    A request handler for `POST /mlflow/traces/calculate-filter-correlation` to calculate
+    NPMI correlation between two trace filter conditions.
+    """
+    request_message = _get_request_message(
+        CalculateTraceFilterCorrelation(),
+        schema={
+            "experiment_ids": [_assert_array, _assert_required, _assert_item_type_string],
+            "filter_string1": [_assert_string, _assert_required],
+            "filter_string2": [_assert_string, _assert_required],
+        },
+    )
+
+    result = _get_tracking_store().calculate_trace_filter_correlation(
+        experiment_ids=request_message.experiment_ids,
+        filter_string1=request_message.filter_string1,
+        filter_string2=request_message.filter_string2,
+    )
+
+    response_message = CalculateTraceFilterCorrelation.Response()
+    response_message.npmi = result.npmi
+    response_message.filter_string1_count = result.filter_string1_count
+    response_message.filter_string2_count = result.filter_string2_count
+    response_message.joint_count = result.joint_count
+    response_message.total_count = result.total_count
+
+    if result.confidence_lower is not None:
+        response_message.confidence_lower = result.confidence_lower
+    if result.confidence_upper is not None:
+        response_message.confidence_upper = result.confidence_upper
+
+    return _wrap_response(response_message)
+
+
+@catch_mlflow_exception
+@_disable_if_artifacts_only
 def _set_trace_tag(request_id):
     """
     A request handler for `PATCH /mlflow/traces/{request_id}/tags` to set tags on a TraceInfo record
@@ -3255,6 +3293,7 @@ HANDLERS = {
     GetTraceInfoV3: _get_trace_info_v3,
     SearchTracesV3: _search_traces_v3,
     DeleteTraces: _delete_traces,
+    CalculateTraceFilterCorrelation: _calculate_trace_filter_correlation,
     SetTraceTag: _set_trace_tag,
     DeleteTraceTag: _delete_trace_tag,
     # Assessment APIs

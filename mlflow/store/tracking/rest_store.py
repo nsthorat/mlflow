@@ -32,6 +32,7 @@ from mlflow.environment_variables import (
 from mlflow.exceptions import MlflowException
 from mlflow.protos import databricks_pb2
 from mlflow.protos.service_pb2 import (
+    CalculateTraceFilterCorrelation,
     CreateAssessment,
     CreateExperiment,
     CreateLoggedModel,
@@ -87,6 +88,7 @@ from mlflow.protos.service_pb2 import (
 from mlflow.store.entities.paged_list import PagedList
 from mlflow.store.tracking import SEARCH_TRACES_DEFAULT_MAX_RESULTS
 from mlflow.store.tracking.abstract_store import AbstractStore
+from mlflow.tracing.analysis import TraceFilterCorrelationResult
 from mlflow.utils.proto_json_utils import message_to_json
 from mlflow.utils.rest_utils import (
     _REST_API_PATH_PREFIX,
@@ -451,6 +453,48 @@ class RestStore(AbstractStore):
             # Convert TraceInfo (v2) objects to TraceInfoV3 objects for consistency
             trace_infos = [TraceInfo.from_proto(t) for t in response_proto.traces]
         return trace_infos, response_proto.next_page_token or None
+
+    def calculate_trace_filter_correlation(
+        self,
+        experiment_ids: list[str],
+        filter_string1: str,
+        filter_string2: str,
+    ) -> TraceFilterCorrelationResult:
+        """
+        Calculate the correlation (NPMI) between two trace filter conditions.
+
+        Args:
+            experiment_ids: List of experiment IDs to search within.
+            filter_string1: First filter condition.
+            filter_string2: Second filter condition.
+
+        Returns:
+            TraceFilterCorrelationResult containing NPMI score and counts.
+        """
+        # Create request message
+        request = CalculateTraceFilterCorrelation(
+            experiment_ids=experiment_ids,
+            filter_string1=filter_string1,
+            filter_string2=filter_string2,
+        )
+
+        req_body = message_to_json(request)
+        response_proto = self._call_endpoint(CalculateTraceFilterCorrelation, req_body)
+
+        # Convert response to result object
+        return TraceFilterCorrelationResult(
+            npmi=response_proto.npmi,
+            confidence_lower=response_proto.confidence_lower
+            if response_proto.HasField("confidence_lower")
+            else None,
+            confidence_upper=response_proto.confidence_upper
+            if response_proto.HasField("confidence_upper")
+            else None,
+            filter_string1_count=response_proto.filter_string1_count,
+            filter_string2_count=response_proto.filter_string2_count,
+            joint_count=response_proto.joint_count,
+            total_count=response_proto.total_count,
+        )
 
     def _search_unified_traces(
         self,

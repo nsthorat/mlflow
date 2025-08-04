@@ -45,6 +45,7 @@ from mlflow.exceptions import MlflowException
 from mlflow.models import Model
 from mlflow.protos.databricks_pb2 import RESOURCE_DOES_NOT_EXIST
 from mlflow.protos.service_pb2 import (
+    CalculateTraceFilterCorrelation,
     CreateAssessment,
     CreateLoggedModel,
     CreateRun,
@@ -972,6 +973,61 @@ def test_set_trace_tag():
             use_v3=False,
         )
         assert res is None
+
+
+def test_calculate_trace_filter_correlation():
+    creds = MlflowHostCreds("https://hello")
+    store = RestStore(lambda: creds)
+    response = mock.MagicMock()
+    response.status_code = 200
+
+    # Mock response data
+    response_data = {
+        "npmi": 0.456,
+        "confidence_lower": 0.4,
+        "confidence_upper": 0.5,
+        "filter_string1_count": 10,
+        "filter_string2_count": 15,
+        "joint_count": 8,
+        "total_count": 30,
+    }
+    response.text = json.dumps(response_data)
+
+    experiment_ids = ["exp1", "exp2"]
+    filter_string1 = "span.type = 'LLM'"
+    filter_string2 = "feedback.quality > 0.8"
+
+    request = CalculateTraceFilterCorrelation(
+        experiment_ids=experiment_ids,
+        filter_string1=filter_string1,
+        filter_string2=filter_string2,
+    )
+
+    with mock.patch("mlflow.utils.rest_utils.http_request", return_value=response) as mock_http:
+        result = store.calculate_trace_filter_correlation(
+            experiment_ids=experiment_ids,
+            filter_string1=filter_string1,
+            filter_string2=filter_string2,
+        )
+
+        _verify_requests(
+            mock_http,
+            creds,
+            "traces/calculate-filter-correlation",
+            "POST",
+            message_to_json(request),
+        )
+
+        from mlflow.tracing.analysis import TraceFilterCorrelationResult
+
+        assert isinstance(result, TraceFilterCorrelationResult)
+        assert result.npmi == 0.456
+        assert result.confidence_lower == 0.4
+        assert result.confidence_upper == 0.5
+        assert result.filter_string1_count == 10
+        assert result.filter_string2_count == 15
+        assert result.joint_count == 8
+        assert result.total_count == 30
 
 
 @pytest.mark.parametrize("is_databricks", [True, False])

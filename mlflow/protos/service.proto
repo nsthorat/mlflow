@@ -809,6 +809,19 @@ service MlflowService {
       rpc_doc_title: "Search Traces V3",
     };
   }
+  
+  // Calculate the correlation (NPMI) between two trace filter conditions.
+  rpc calculateTraceFilterCorrelation(CalculateTraceFilterCorrelation) returns (CalculateTraceFilterCorrelation.Response) {
+    option (rpc) = {
+      endpoints: [{
+        method: "POST",
+        path: "/mlflow/traces/calculate-filter-correlation"
+        since { major: 2, minor: 0 },
+      }],
+      visibility: PUBLIC_UNDOCUMENTED,
+      rpc_doc_title: "Calculate Trace Filter Correlation",
+    };
+  }
 }
 
 // View type for ListExperiments query.
@@ -2401,5 +2414,41 @@ message SearchTracesV3 {
     // Information about traces that match the search criteria.
     repeated TraceInfoV3 traces = 1;
     optional string next_page_token = 2;
+  }
+}
+
+message CalculateTraceFilterCorrelation {
+  option (scalapb.message).extends = "com.databricks.rpc.RPC[$this.Response]";
+  
+  // List of experiment IDs to search within.
+  repeated string experiment_ids = 1;
+  
+  // First filter condition (e.g., "span.type = 'LLM'").
+  optional string filter_string1 = 2;
+  
+  // Second filter condition (e.g., "feedback.quality > 0.8").
+  optional string filter_string2 = 3;
+  
+  message Response {
+    // Normalized Pointwise Mutual Information score (-1 to 1).
+    optional double npmi = 1;
+    
+    // Lower bound of the confidence interval for NPMI.
+    optional double confidence_lower = 2;
+    
+    // Upper bound of the confidence interval for NPMI.
+    optional double confidence_upper = 3;
+    
+    // Number of traces matching the first filter.
+    optional int32 filter_string1_count = 4;
+    
+    // Number of traces matching the second filter.
+    optional int32 filter_string2_count = 5;
+    
+    // Number of traces matching both filters.
+    optional int32 joint_count = 6;
+    
+    // Total number of traces in the experiments.
+    optional int32 total_count = 7;
   }
 }
