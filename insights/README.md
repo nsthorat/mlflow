@@ -1,13 +1,13 @@
-# MLflow Server with PostgreSQL
+# MLflow Insights Prototype
 
-This directory contains Docker configurations for running MLflow server with PostgreSQL backend, including the `pg_trgm` extension required for efficient span content search.
+This directory contains a prototype for advanced trace analysis capabilities in MLflow, including correlation analysis and powerful search functionality. The prototype runs on a PostgreSQL-backed MLflow server with enhanced querying capabilities.
 
-## Prerequisites
+## Quick Start
+
+### Prerequisites
 
 - Docker and Docker Compose installed
 - Port 5001 (MLflow) and 5432 (PostgreSQL) available
-
-## Quick Start
 
 1. Navigate to the insights directory:
 
@@ -29,13 +29,15 @@ This directory contains Docker configurations for running MLflow server with Pos
 
 4. Access MLflow UI at http://localhost:5001
 
-## Architecture
+## Server Architecture
+
+### PostgreSQL Backend
 
 - **PostgreSQL 15**: Database backend with `pg_trgm` extension pre-installed
 - **MLflow Server**: Running from source with PostgreSQL backend store
 - **Automatic Migrations**: MLflow will run database migrations on startup
 
-## Configuration
+### Configuration
 
 ### PostgreSQL
 
@@ -135,6 +137,328 @@ docker-compose down -v
    ```bash
    curl http://localhost:5001/health
    ```
+
+## Logging Traces to the Server
+
+Once your server is running, you can start logging traces from your ML applications. Here's how to configure your client and log traces:
+
+### Basic Setup
+
+```python
+import mlflow
+from mlflow import MlflowClient
+
+# Point to your insights server
+mlflow.set_tracking_uri("http://localhost:5001")
+
+# Create an experiment
+client = MlflowClient()
+experiment_id = client.create_experiment("my-ml-app")
+mlflow.set_experiment("my-ml-app")
+```
+
+### Logging Traces with the Fluent API
+
+```python
+import mlflow.tracing.fluent as fluent
+
+
+# Simple trace with automatic instrumentation
+@fluent.trace(name="chat_completion")
+def process_query(query: str) -> str:
+    # Your ML logic here
+    with fluent.start_span("retrieve_context") as span:
+        span.set_attributes({"query_length": len(query)})
+        context = retrieve_documents(query)
+        span.set_outputs({"num_docs": len(context)})
+
+    with fluent.start_span("generate_response", span_type="LLM") as span:
+        span.set_attributes({"model": "gpt-4", "temperature": 0.7, "max_tokens": 500})
+        response = llm.generate(query, context)
+        span.set_outputs({"response_length": len(response)})
+
+    return response
+
+
+# Call your traced function
+result = process_query("What is MLflow?")
+
+# Add trace-level tags
+trace_id = fluent.get_last_active_trace_id()
+client.set_trace_tag(trace_id, "environment", "production")
+client.set_trace_tag(trace_id, "version", "v1.2.0")
+```
+
+### Logging Feedback and Assessments
+
+```python
+# Log user feedback
+from mlflow.tracing.client import TracingClient
+
+# Get the most recent trace
+tracing_client = TracingClient()
+traces = tracing_client.search_traces(experiment_ids=[experiment_id], max_results=1)
+if traces:
+    trace_id = traces[0].info.trace_id
+
+    # Log feedback scores
+    client.log_feedback(
+        trace_id=trace_id,
+        feedback={"quality": 0.9, "user_rating": 5, "relevance": 0.85},
+    )
+
+    # Log assessments
+    client.log_assessment(
+        trace_id=trace_id,
+        assessment={
+            "accuracy": "correct",
+            "safety": "safe",
+            "helpfulness": "very_helpful",
+        },
+    )
+```
+
+### Advanced Trace Logging
+
+```python
+# Manual trace construction for more control
+trace = mlflow.start_trace(name="rag_pipeline")
+
+# Root span for the entire pipeline
+with mlflow.start_span(name="rag_process", span_type="CHAIN") as root:
+    root.set_inputs({"query": "Explain transformers"})
+
+    # Retrieval phase
+    with mlflow.start_span(name="retrieval", span_type="RETRIEVER") as ret_span:
+        ret_span.set_attributes(
+            {"index": "documentation", "top_k": 5, "similarity_threshold": 0.7}
+        )
+        docs = retriever.search(query)
+        ret_span.set_outputs({"documents": [d.id for d in docs]})
+
+    # Multiple LLM calls for different purposes
+    with mlflow.start_span(name="summarize_context", span_type="LLM") as sum_span:
+        sum_span.set_attributes({"model": "gpt-3.5-turbo"})
+        summary = llm.summarize(docs)
+
+    with mlflow.start_span(name="generate_answer", span_type="LLM") as gen_span:
+        gen_span.set_attributes({"model": "gpt-4", "temperature": 0.3})
+        answer = llm.generate(query, summary)
+        gen_span.set_outputs({"answer": answer})
+
+    root.set_outputs({"final_answer": answer})
+
+# End the trace
+mlflow.end_trace(trace.info.trace_id)
+
+# Add metadata
+client.set_trace_tag(trace.info.trace_id, "pipeline_type", "rag")
+client.set_trace_tag(trace.info.trace_id, "customer_id", "12345")
+```
+
+### Logging Error Traces
+
+```python
+@fluent.trace(name="error_prone_operation")
+def risky_operation(data):
+    try:
+        with fluent.start_span("validation") as span:
+            if not validate_input(data):
+                span.set_status("ERROR")
+                span.set_attributes({"error_type": "validation_failed"})
+                raise ValueError("Invalid input data")
+
+        with fluent.start_span("processing") as span:
+            result = process_data(data)
+            span.set_outputs({"result": result})
+            return result
+
+    except Exception as e:
+        # The trace will capture the error
+        fluent.get_current_active_span().set_status("ERROR")
+        fluent.get_current_active_span().set_attributes(
+            {"error_message": str(e), "error_type": type(e).__name__}
+        )
+        raise
+```
+
+## Searching Traces
+
+The insights server provides powerful search capabilities for finding and analyzing traces. Here's how to use the search functionality:
+
+### Basic Search
+
+```python
+from mlflow.tracing.client import TracingClient
+
+client = TracingClient(tracking_uri="http://localhost:5001")
+
+# Search all traces in an experiment
+traces = client.search_traces(experiment_ids=[experiment_id], max_results=100)
+
+# Search with basic filters
+traces = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="trace.status = 'OK'",
+    order_by=["trace.timestamp_ms DESC"],
+)
+```
+
+### Filtering by Trace Properties
+
+```python
+# Filter by execution time
+fast_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="trace.execution_time_ms < 1000"
+)
+
+# Filter by status
+error_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="trace.status = 'ERROR'"
+)
+
+# Filter by timestamp (last 24 hours)
+import time
+
+yesterday = int((time.time() - 86400) * 1000)
+recent_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string=f"trace.timestamp_ms > {yesterday}"
+)
+```
+
+### Filtering by Span Characteristics
+
+```python
+# Find traces containing specific span types
+llm_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="span.type = 'LLM'"
+)
+
+# Find traces with specific span names
+database_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="span.name LIKE '%database%'"
+)
+
+# Find traces with span errors
+span_error_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="span.status = 'ERROR'"
+)
+
+# Find traces with specific span attributes
+gpt4_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="span.attributes['model'] = 'gpt-4'"
+)
+```
+
+### Using Count Expressions
+
+```python
+# Find traces with multiple LLM calls
+multi_llm_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="count(span.type = 'LLM') > 3"
+)
+
+# Find traces with at least one error span
+error_span_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="count(span.status = 'ERROR') > 0"
+)
+
+# Find complex pipelines
+complex_traces = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="count(span.type = 'CHAIN') >= 2 AND count(span.type = 'RETRIEVER') > 0",
+)
+```
+
+### Filtering by Tags
+
+```python
+# Filter by environment
+prod_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="tags.environment = 'production'"
+)
+
+# Filter by multiple tags
+enterprise_v2_traces = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="tags.customer_tier = 'enterprise' AND tags.version = 'v2.0'",
+)
+```
+
+### Filtering by Feedback and Assessments
+
+```python
+# High-quality traces
+quality_traces = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="feedback.quality > 0.8"
+)
+
+# Traces with positive user ratings
+happy_users = client.search_traces(
+    experiment_ids=[experiment_id], filter_string="feedback.user_rating >= 4"
+)
+
+# Correct and safe traces
+good_traces = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="assessment.accuracy = 'correct' AND assessment.safety = 'safe'",
+)
+```
+
+### Complex Search Queries
+
+```python
+# Combine multiple conditions
+complex_search = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="""
+        trace.status = 'OK' AND
+        trace.execution_time_ms < 5000 AND
+        count(span.type = 'LLM') > 1 AND
+        feedback.quality > 0.7 AND
+        tags.environment = 'production'
+    """,
+    order_by=["trace.timestamp_ms DESC"],
+    max_results=50,
+)
+
+# Search for performance issues
+perf_issues = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="""
+        (trace.execution_time_ms > 10000 OR count(span.status = 'ERROR') > 0) AND
+        tags.environment = 'production'
+    """,
+    order_by=["trace.execution_time_ms DESC"],
+)
+```
+
+### Analyzing Search Results
+
+```python
+# Get search results and analyze
+traces = client.search_traces(
+    experiment_ids=[experiment_id],
+    filter_string="span.type = 'LLM' AND trace.execution_time_ms > 3000",
+)
+
+print(f"Found {len(traces)} slow LLM traces")
+
+# Analyze patterns
+for trace in traces[:10]:
+    print(f"Trace ID: {trace.info.trace_id}")
+    print(f"Execution time: {trace.info.execution_time_ms}ms")
+    print(f"Status: {trace.info.status}")
+
+    # Count LLM spans
+    llm_spans = [s for s in trace.data.spans if s.type == "LLM"]
+    print(f"Number of LLM calls: {len(llm_spans)}")
+
+    # Get tags
+    if trace.info.tags:
+        print(f"Tags: {trace.info.tags}")
+    print("---")
+```
 
 ## Using the Trace Filter Correlation API
 
