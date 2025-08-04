@@ -1688,8 +1688,7 @@ class SearchTraceUtils(SearchUtils):
         elif cls.is_attribute(type_, key, comparator):
             lhs = getattr(trace, key)
         elif cls.is_feedback(type_, comparator):
-            # This method is only used by FileStore for client-side filtering
-            # Feedback filtering requires database joins, so we can't support it here
+            # TODO: Implement in-memory feedback filtering of traces
             raise MlflowException(
                 "Feedback filtering requires database support and cannot be performed "
                 "on in-memory trace data.",

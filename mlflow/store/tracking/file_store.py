@@ -2182,14 +2182,6 @@ class FileStore(AbstractStore):
                 f"most {SEARCH_MAX_RESULTS_THRESHOLD}, but got value {max_results}",
                 INVALID_PARAMETER_VALUE,
             )
-        # Check if filter_string contains feedback filtering, which is not supported in FileStore
-        if filter_string and "feedback." in filter_string:
-            raise MlflowException(
-                "Feedback filtering is not supported with file-based backend stores. "
-                "Please use a database-backed store (e.g., SQLite) for this functionality.",
-                error_code=INVALID_PARAMETER_VALUE,
-            )
-
         traces = []
         for experiment_id in experiment_ids:
             trace_infos = self._list_trace_infos(experiment_id)
