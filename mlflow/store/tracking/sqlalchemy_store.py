@@ -28,6 +28,7 @@ from mlflow.entities import (
     RunStatus,
     RunTag,
     SourceType,
+    TraceFilterCorrelation,
     TraceInfo,
     ViewType,
     _DatasetSummary,
@@ -2826,6 +2827,162 @@ class SqlAlchemyStore(AbstractStore):
                 session.merge(sql_span)
 
         return spans
+
+    def calculate_trace_filter_correlation(
+        self,
+        experiment_ids: list[str],
+        filter_string1: str,
+        filter_string2: str,
+    ) -> TraceFilterCorrelation:
+        """
+        Calculate the correlation (NPMI) between two trace filter conditions.
+
+        This method computes the Normalized Pointwise Mutual Information (NPMI)
+        between traces matching two different filter conditions, which measures
+        how often the conditions co-occur compared to chance.
+
+        Args:
+            experiment_ids: List of experiment IDs to search traces in.
+            filter_string1: First filter condition (e.g., "span.status = 'ERROR'").
+            filter_string2: Second filter condition (e.g., "count(span.type = 'TOOL') > 5").
+
+        Returns:
+            TraceFilterCorrelation object containing:
+            - npmi: Correlation score from -1 to 1
+            - confidence intervals (if available)
+            - support counts for both filters and their intersection
+
+        Raises:
+            MlflowException: If filter syntax is invalid or experiments don't exist.
+        """
+        # Validate that all experiments exist
+        for experiment_id in experiment_ids:
+            self._get_experiment(experiment_id)
+
+        with self.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
+
+            # Get base query for all traces in experiments
+            base_traces_query = session.query(SqlTraceInfo.request_id).filter(
+                SqlTraceInfo.experiment_id.in_(experiment_ids)
+            )
+
+            # Build filter subqueries for both filters
+            filter1_traces = self._build_filter_subquery(session, experiment_ids, filter_string1)
+            filter2_traces = self._build_filter_subquery(session, experiment_ids, filter_string2)
+
+            # Calculate counts using SQL
+            total_count = base_traces_query.count()
+
+            filter1_count = (
+                session.query(SqlTraceInfo.request_id)
+                .filter(
+                    SqlTraceInfo.experiment_id.in_(experiment_ids),
+                    SqlTraceInfo.request_id.in_(filter1_traces),
+                )
+                .count()
+            )
+
+            filter2_count = (
+                session.query(SqlTraceInfo.request_id)
+                .filter(
+                    SqlTraceInfo.experiment_id.in_(experiment_ids),
+                    SqlTraceInfo.request_id.in_(filter2_traces),
+                )
+                .count()
+            )
+
+            # Calculate joint count (intersection)
+            joint_count = (
+                session.query(SqlTraceInfo.request_id)
+                .filter(
+                    SqlTraceInfo.experiment_id.in_(experiment_ids),
+                    SqlTraceInfo.request_id.in_(filter1_traces),
+                    SqlTraceInfo.request_id.in_(filter2_traces),
+                )
+                .count()
+            )
+
+            # Calculate NPMI
+            npmi = self._calculate_npmi(joint_count, filter1_count, filter2_count, total_count)
+
+            return TraceFilterCorrelation(
+                npmi=npmi,
+                filter_string1_count=filter1_count,
+                filter_string2_count=filter2_count,
+                joint_count=joint_count,
+                total_count=total_count,
+            )
+
+    def _build_filter_subquery(self, session, experiment_ids: list[str], filter_string: str):
+        """Build a subquery that returns trace IDs matching the given filter."""
+        from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
+
+        # Use existing filter clause builder
+        try:
+            dialect = self.engine.dialect
+            attribute_filters, non_attribute_filters = _get_filter_clauses_for_search_traces(
+                filter_string, session, dialect
+            )
+        except Exception as e:
+            raise MlflowException(
+                f"Invalid filter syntax: {e}",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+
+        # Start with base query
+        query = session.query(SqlTraceInfo.request_id).filter(
+            SqlTraceInfo.experiment_id.in_(experiment_ids)
+        )
+
+        # Apply attribute filters
+        for attr_filter in attribute_filters:
+            query = query.filter(attr_filter)
+
+        # Apply non-attribute filters (joins with subqueries)
+        for non_attr_filter in non_attribute_filters:
+            query = query.filter(
+                SqlTraceInfo.request_id.in_(session.query(non_attr_filter.c.trace_id))
+            )
+
+        return query.subquery()
+
+    def _calculate_npmi(
+        self, joint_count: int, filter1_count: int, filter2_count: int, total_count: int
+    ) -> float:
+        """Calculate Normalized Pointwise Mutual Information (NPMI)."""
+        # Handle edge cases
+        if total_count == 0:
+            return 0.0
+
+        if joint_count == 0:
+            return -1.0
+
+        if joint_count == filter1_count == filter2_count == total_count:
+            return 1.0
+
+        if filter1_count == 0 or filter2_count == 0:
+            return -1.0
+
+        # Calculate probabilities
+        p_joint = joint_count / total_count
+        p_filter1 = filter1_count / total_count
+        p_filter2 = filter2_count / total_count
+
+        # PMI calculation: log2(P(A,B) / (P(A) * P(B)))
+        if p_joint == 0 or p_filter1 == 0 or p_filter2 == 0:
+            return -1.0
+
+        pmi = math.log2(p_joint / (p_filter1 * p_filter2))
+
+        # NPMI normalization: PMI / (-log2(P(A,B)))
+        if p_joint == 1.0:
+            return 1.0
+
+        npmi = pmi / (-math.log2(p_joint))
+
+        # Clamp to [-1, 1] range to handle floating point precision issues
+        return max(-1.0, min(1.0, npmi))
 
 
 def _get_sqlalchemy_filter_clauses(parsed, session, dialect):
