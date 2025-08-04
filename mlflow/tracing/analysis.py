@@ -1,11 +1,18 @@
+"""
+Analysis utilities for MLflow tracing.
+"""
+
 from dataclasses import dataclass
 from typing import Optional
 
 
 @dataclass
-class TraceFilterCorrelation:
+class TraceFilterCorrelationResult:
     """
-    Represents the correlation between two trace filter conditions.
+    Result of calculating correlation between two trace filter conditions.
+
+    This class represents the correlation analysis between two trace filters,
+    using Normalized Pointwise Mutual Information (NPMI) as the correlation metric.
 
     Attributes:
         npmi: Normalized Pointwise Mutual Information score (-1 to 1).

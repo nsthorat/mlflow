@@ -7019,3 +7019,597 @@ async def test_log_spans_empty_list(store: SqlAlchemyStore):
     """Test logging an empty list of spans."""
     result = await store.log_spans([])
     assert result == []
+
+
+def test_calculate_trace_filter_correlation_basic(store: SqlAlchemyStore):
+    """Test basic correlation calculation between two filters."""
+    # Create experiment
+    exp_id = _create_experiments(store, "correlation_test")
+
+    # Create traces with different characteristics
+    # 10 traces with span.status = 'ERROR' AND span.type = 'TOOL'
+    for i in range(10):
+        trace_id = f"tr-error-tool-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            # Create trace
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=i * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Create error tool span
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-{i}",
+                parent_span_id=None,
+                name="tool_operation",
+                type="TOOL",
+                status="ERROR",
+                start_time_unix_nano=i * 1000000000,
+                end_time_unix_nano=(i + 1) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # 5 traces with span.status = 'ERROR' but NOT span.type = 'TOOL'
+    for i in range(5):
+        trace_id = f"tr-error-notool-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(10 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-error-{i}",
+                parent_span_id=None,
+                name="llm_operation",
+                type="LLM",
+                status="ERROR",
+                start_time_unix_nano=(10 + i) * 1000000000,
+                end_time_unix_nano=(11 + i) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # 5 traces with span.type = 'TOOL' but NOT span.status = 'ERROR'
+    for i in range(5):
+        trace_id = f"tr-ok-tool-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(15 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-ok-{i}",
+                parent_span_id=None,
+                name="tool_operation",
+                type="TOOL",
+                status="OK",
+                start_time_unix_nano=(15 + i) * 1000000000,
+                end_time_unix_nano=(16 + i) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # 10 traces with neither error nor tool
+    for i in range(10):
+        trace_id = f"tr-ok-notool-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(20 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-ok-notool-{i}",
+                parent_span_id=None,
+                name="llm_operation",
+                type="LLM",
+                status="OK",
+                start_time_unix_nano=(20 + i) * 1000000000,
+                end_time_unix_nano=(21 + i) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # Calculate correlation
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="span.status = 'ERROR'",
+        filter_string2="span.type = 'TOOL'",
+    )
+
+    # Verify counts
+    assert result.total_count == 30  # Total traces
+    assert result.filter_string1_count == 15  # ERROR spans (10 + 5)
+    assert result.filter_string2_count == 15  # TOOL spans (10 + 5)
+    assert result.joint_count == 10  # Both ERROR and TOOL
+
+    # Calculate expected NPMI
+    # P(ERROR) = 15/30 = 0.5
+    # P(TOOL) = 15/30 = 0.5
+    # P(ERROR,TOOL) = 10/30 = 0.333...
+    # PMI = log2(0.333... / (0.5 * 0.5)) = log2(1.333...) = 0.415
+    # NPMI = PMI / (-log2(0.333...)) = 0.415 / 1.585 ≈ 0.262
+    assert 0.25 < result.npmi < 0.27
+
+
+def test_calculate_trace_filter_correlation_perfect(store: SqlAlchemyStore):
+    """Test perfect positive and negative correlations."""
+    exp_id = _create_experiments(store, "perfect_correlation_test")
+
+    # Create traces where tag.version='v1' ALWAYS occurs with span.status='ERROR'
+    for i in range(10):
+        trace_id = f"tr-perfect-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo, SqlTraceTag
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=i * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Add tag
+            tag = SqlTraceTag(
+                request_id=trace_id,
+                key="version",
+                value="v1",
+            )
+            session.add(tag)
+
+            # Add error span
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-{i}",
+                parent_span_id=None,
+                name="operation",
+                type="LLM",
+                status="ERROR",
+                start_time_unix_nano=i * 1000000000,
+                end_time_unix_nano=(i + 1) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # Test perfect positive correlation
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="tags.version = 'v1'",
+        filter_string2="span.status = 'ERROR'",
+    )
+
+    assert result.total_count == 10
+    assert result.filter_string1_count == 10
+    assert result.filter_string2_count == 10
+    assert result.joint_count == 10
+    assert result.npmi == 1.0  # Perfect positive correlation
+
+    # Create traces with no overlap (perfect negative correlation)
+    for i in range(10):
+        trace_id = f"tr-v2-ok-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo, SqlTraceTag
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(10 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Add different tag
+            tag = SqlTraceTag(
+                request_id=trace_id,
+                key="version",
+                value="v2",
+            )
+            session.add(tag)
+
+            # Add OK span
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-ok-{i}",
+                parent_span_id=None,
+                name="operation",
+                type="LLM",
+                status="OK",
+                start_time_unix_nano=(10 + i) * 1000000000,
+                end_time_unix_nano=(11 + i) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # Test negative correlation (v1 never appears with OK status)
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="tags.version = 'v1'",
+        filter_string2="span.status = 'OK'",
+    )
+
+    assert result.total_count == 20
+    assert result.filter_string1_count == 10
+    assert result.filter_string2_count == 10
+    assert result.joint_count == 0
+    assert result.npmi == -1.0  # Perfect negative correlation
+
+
+def test_calculate_trace_filter_correlation_count_expressions(store: SqlAlchemyStore):
+    """Test correlation with count expressions."""
+    exp_id = _create_experiments(store, "count_correlation_test")
+
+    # Create traces with varying numbers of TOOL spans
+    # 5 traces with >3 TOOL spans that also have errors
+    for i in range(5):
+        trace_id = f"tr-many-tools-error-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=i * 1000,
+                execution_time_ms=100,
+                status="ERROR",
+            )
+            session.add(trace_info)
+
+            # Create 4 TOOL spans (>3)
+            for j in range(4):
+                span = SqlSpan(
+                    trace_id=trace_id,
+                    experiment_id=exp_id,
+                    span_id=f"sp-{i}-{j}",
+                    parent_span_id=None,
+                    name=f"tool_{j}",
+                    type="TOOL",
+                    status="OK",
+                    start_time_unix_nano=(i * 4 + j) * 1000000000,
+                    end_time_unix_nano=(i * 4 + j + 1) * 1000000000,
+                    content="{}",
+                )
+                session.add(span)
+
+    # 5 traces with >3 TOOL spans but no errors
+    for i in range(5):
+        trace_id = f"tr-many-tools-ok-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(5 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Create 4 TOOL spans
+            for j in range(4):
+                span = SqlSpan(
+                    trace_id=trace_id,
+                    experiment_id=exp_id,
+                    span_id=f"sp-ok-{i}-{j}",
+                    parent_span_id=None,
+                    name=f"tool_{j}",
+                    type="TOOL",
+                    status="OK",
+                    start_time_unix_nano=((5 + i) * 4 + j) * 1000000000,
+                    end_time_unix_nano=((5 + i) * 4 + j + 1) * 1000000000,
+                    content="{}",
+                )
+                session.add(span)
+
+    # 10 traces with <=3 TOOL spans
+    for i in range(10):
+        trace_id = f"tr-few-tools-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=(10 + i) * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Create only 2 TOOL spans
+            for j in range(2):
+                span = SqlSpan(
+                    trace_id=trace_id,
+                    experiment_id=exp_id,
+                    span_id=f"sp-few-{i}-{j}",
+                    parent_span_id=None,
+                    name=f"tool_{j}",
+                    type="TOOL",
+                    status="OK",
+                    start_time_unix_nano=((10 + i) * 2 + j) * 1000000000,
+                    end_time_unix_nano=((10 + i) * 2 + j + 1) * 1000000000,
+                    content="{}",
+                )
+                session.add(span)
+
+    # Test correlation between having many tools and trace errors
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="count(span.type = 'TOOL') > 3",
+        filter_string2="attributes.status = 'ERROR'",
+    )
+
+    assert result.total_count == 20
+    assert result.filter_string1_count == 10  # Traces with >3 tools
+    assert result.filter_string2_count == 5  # Traces with ERROR status
+    assert result.joint_count == 5  # Overlap
+
+    # NPMI should be positive but not perfect
+    assert 0 < result.npmi < 1
+
+
+def test_calculate_trace_filter_correlation_zero_counts(store: SqlAlchemyStore):
+    """Test edge cases with zero counts."""
+    exp_id = _create_experiments(store, "zero_counts_test")
+
+    # Create a few traces with only OK status
+    for i in range(5):
+        trace_id = f"tr-ok-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=i * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-{i}",
+                parent_span_id=None,
+                name="operation",
+                type="LLM",
+                status="OK",
+                start_time_unix_nano=i * 1000000000,
+                end_time_unix_nano=(i + 1) * 1000000000,
+                content="{}",
+            )
+            session.add(span)
+
+    # Test correlation when one filter matches nothing
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="span.status = 'ERROR'",  # No matches
+        filter_string2="span.status = 'OK'",  # All match
+    )
+
+    assert result.total_count == 5
+    assert result.filter_string1_count == 0
+    assert result.filter_string2_count == 5
+    assert result.joint_count == 0
+    assert result.npmi == -1.0  # No correlation possible
+
+    # Test when both filters match nothing
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="span.status = 'ERROR'",  # No matches
+        filter_string2="span.type = 'UNKNOWN'",  # No matches
+    )
+
+    assert result.total_count == 5
+    assert result.filter_string1_count == 0
+    assert result.filter_string2_count == 0
+    assert result.joint_count == 0
+    assert result.npmi == -1.0
+
+
+def test_calculate_trace_filter_correlation_complex_filters(store: SqlAlchemyStore):
+    """Test correlation with complex filter expressions."""
+    exp_id = _create_experiments(store, "complex_filters_test")
+
+    # Create traces with feedback
+    for i in range(10):
+        trace_id = f"tr-feedback-{i}"
+        with store.ManagedSessionMaker() as session:
+            from mlflow.store.tracking.dbmodels.models import SqlAssessments, SqlSpan, SqlTraceInfo
+
+            trace_info = SqlTraceInfo(
+                request_id=trace_id,
+                experiment_id=exp_id,
+                timestamp_ms=i * 1000,
+                execution_time_ms=100,
+                status="OK",
+            )
+            session.add(trace_info)
+
+            # Add span with content
+            span = SqlSpan(
+                trace_id=trace_id,
+                experiment_id=exp_id,
+                span_id=f"sp-{i}",
+                parent_span_id=None,
+                name="chat_operation",
+                type="LLM",
+                status="OK" if i < 5 else "ERROR",
+                start_time_unix_nano=i * 1000000000,
+                end_time_unix_nano=(i + 1) * 1000000000,
+                content=json.dumps({"message": "timeout" if i >= 5 else "success"}),
+            )
+            session.add(span)
+
+            # Add feedback
+            feedback_value = 0.9 if i < 5 else 0.3
+            assessment = SqlAssessments(
+                assessment_id=f"fb-{i}",
+                trace_id=trace_id,
+                name="quality",
+                assessment_type="feedback",
+                source_type="HUMAN",
+                source_id="user123",
+                value=json.dumps({"value": feedback_value}),
+                created_timestamp=i * 1000,
+                last_updated_timestamp=i * 1000,
+            )
+            session.add(assessment)
+
+    # Test correlation between error content and low feedback
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id],
+        filter_string1="span.content LIKE '%timeout%'",
+        filter_string2="feedback.quality < 0.5",
+    )
+
+    assert result.total_count == 10
+    assert result.filter_string1_count == 5  # Traces with timeout
+    assert result.filter_string2_count == 5  # Traces with low feedback
+    assert result.joint_count == 5  # Perfect overlap
+    assert result.npmi == 1.0  # Perfect correlation
+
+
+def test_calculate_trace_filter_correlation_invalid_inputs(store: SqlAlchemyStore):
+    """Test error handling for invalid inputs."""
+    exp_id = _create_experiments(store, "error_test")
+
+    # Test invalid experiment ID
+    with pytest.raises(MlflowException, match="No Experiment with id=nonexistent exists"):
+        store.calculate_trace_filter_correlation(
+            experiment_ids=["nonexistent"],
+            filter_string1="span.status = 'ERROR'",
+            filter_string2="span.type = 'TOOL'",
+        )
+
+    # Test invalid filter syntax
+    with pytest.raises(MlflowException, match="Invalid clause"):
+        store.calculate_trace_filter_correlation(
+            experiment_ids=[exp_id],
+            filter_string1="invalid syntax here",
+            filter_string2="span.type = 'TOOL'",
+        )
+
+    # Test empty experiment list
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[],
+        filter_string1="span.status = 'ERROR'",
+        filter_string2="span.type = 'TOOL'",
+    )
+    assert result.total_count == 0
+    assert result.npmi == 0.0  # No data
+
+
+def test_calculate_trace_filter_correlation_multiple_experiments(store: SqlAlchemyStore):
+    """Test correlation across multiple experiments."""
+    exp_id1 = _create_experiments(store, "multi_exp_1")
+    exp_id2 = _create_experiments(store, "multi_exp_2")
+
+    # Create traces in both experiments with different patterns
+    # exp1: All traces have prod tag, most have TOOL spans (4/5)
+    # exp2: All traces have dev tag, few have TOOL spans (1/5)
+    for exp_id in [exp_id1, exp_id2]:
+        for i in range(5):
+            trace_id = f"tr-exp{exp_id}-{i}"
+            with store.ManagedSessionMaker() as session:
+                from mlflow.store.tracking.dbmodels.models import SqlSpan, SqlTraceInfo, SqlTraceTag
+
+                trace_info = SqlTraceInfo(
+                    request_id=trace_id,
+                    experiment_id=exp_id,
+                    timestamp_ms=i * 1000,
+                    execution_time_ms=100,
+                    status="OK",
+                )
+                session.add(trace_info)
+
+                # Add tag based on experiment
+                tag = SqlTraceTag(
+                    request_id=trace_id,
+                    key="env",
+                    value="prod" if exp_id == exp_id1 else "dev",
+                )
+                session.add(tag)
+
+                # Add span - different distribution per experiment
+                # exp1: 4 TOOL spans, 1 LLM span
+                # exp2: 1 TOOL span, 4 LLM spans
+                if exp_id == exp_id1:
+                    span_type = "TOOL" if i < 4 else "LLM"
+                else:
+                    span_type = "TOOL" if i == 0 else "LLM"
+
+                span = SqlSpan(
+                    trace_id=trace_id,
+                    experiment_id=exp_id,
+                    span_id=f"sp-{exp_id}-{i}",
+                    parent_span_id=None,
+                    name="operation",
+                    type=span_type,
+                    status="OK",
+                    start_time_unix_nano=i * 1000000000,
+                    end_time_unix_nano=(i + 1) * 1000000000,
+                    content="{}",
+                )
+                session.add(span)
+
+    # Test correlation across both experiments
+    result = store.calculate_trace_filter_correlation(
+        experiment_ids=[exp_id1, exp_id2],
+        filter_string1="tags.env = 'prod'",
+        filter_string2="span.type = 'TOOL'",
+    )
+
+    assert result.total_count == 10  # 5 traces in each experiment
+    assert result.filter_string1_count == 5  # Only exp1 has prod tag
+    assert result.filter_string2_count == 5  # 4 TOOL in exp1 + 1 TOOL in exp2
+    assert result.joint_count == 4  # 4 TOOL spans in prod exp
+
+    # NPMI should show positive correlation
+    # P(prod) = 5/10 = 0.5
+    # P(TOOL) = 5/10 = 0.5
+    # P(prod & TOOL) = 4/10 = 0.4
+    # PMI = log2(0.4 / (0.5 * 0.5)) = log2(1.6) ≈ 0.678
+    # NPMI = PMI / (-log2(0.4)) ≈ 0.678 / 1.322 ≈ 0.513
+    assert 0.4 < result.npmi < 0.6

@@ -28,7 +28,6 @@ from mlflow.entities import (
     RunStatus,
     RunTag,
     SourceType,
-    TraceFilterCorrelation,
     TraceInfo,
     ViewType,
     _DatasetSummary,
@@ -83,6 +82,7 @@ from mlflow.store.tracking.dbmodels.models import (
     SqlTraceMetadata,
     SqlTraceTag,
 )
+from mlflow.tracing.analysis import TraceFilterCorrelationResult
 from mlflow.tracing.utils import TraceJSONEncoder, generate_request_id_v2
 from mlflow.tracking.fluent import _get_experiment_id
 from mlflow.utils.file_utils import local_file_uri_to_path, mkdir
@@ -2833,7 +2833,7 @@ class SqlAlchemyStore(AbstractStore):
         experiment_ids: list[str],
         filter_string1: str,
         filter_string2: str,
-    ) -> TraceFilterCorrelation:
+    ) -> TraceFilterCorrelationResult:
         """
         Calculate the correlation (NPMI) between two trace filter conditions.
 
@@ -2857,7 +2857,7 @@ class SqlAlchemyStore(AbstractStore):
         """
         # Validate that all experiments exist
         for experiment_id in experiment_ids:
-            self._get_experiment(experiment_id)
+            self.get_experiment(experiment_id)
 
         with self.ManagedSessionMaker() as session:
             from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
@@ -2878,7 +2878,7 @@ class SqlAlchemyStore(AbstractStore):
                 session.query(SqlTraceInfo.request_id)
                 .filter(
                     SqlTraceInfo.experiment_id.in_(experiment_ids),
-                    SqlTraceInfo.request_id.in_(filter1_traces),
+                    SqlTraceInfo.request_id.in_(select(filter1_traces)),
                 )
                 .count()
             )
@@ -2887,7 +2887,7 @@ class SqlAlchemyStore(AbstractStore):
                 session.query(SqlTraceInfo.request_id)
                 .filter(
                     SqlTraceInfo.experiment_id.in_(experiment_ids),
-                    SqlTraceInfo.request_id.in_(filter2_traces),
+                    SqlTraceInfo.request_id.in_(select(filter2_traces)),
                 )
                 .count()
             )
@@ -2897,8 +2897,8 @@ class SqlAlchemyStore(AbstractStore):
                 session.query(SqlTraceInfo.request_id)
                 .filter(
                     SqlTraceInfo.experiment_id.in_(experiment_ids),
-                    SqlTraceInfo.request_id.in_(filter1_traces),
-                    SqlTraceInfo.request_id.in_(filter2_traces),
+                    SqlTraceInfo.request_id.in_(select(filter1_traces)),
+                    SqlTraceInfo.request_id.in_(select(filter2_traces)),
                 )
                 .count()
             )
@@ -2906,7 +2906,7 @@ class SqlAlchemyStore(AbstractStore):
             # Calculate NPMI
             npmi = self._calculate_npmi(joint_count, filter1_count, filter2_count, total_count)
 
-            return TraceFilterCorrelation(
+            return TraceFilterCorrelationResult(
                 npmi=npmi,
                 filter_string1_count=filter1_count,
                 filter_string2_count=filter2_count,
@@ -2919,16 +2919,9 @@ class SqlAlchemyStore(AbstractStore):
         from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
 
         # Use existing filter clause builder
-        try:
-            dialect = self.engine.dialect
-            attribute_filters, non_attribute_filters = _get_filter_clauses_for_search_traces(
-                filter_string, session, dialect
-            )
-        except Exception as e:
-            raise MlflowException(
-                f"Invalid filter syntax: {e}",
-                error_code=INVALID_PARAMETER_VALUE,
-            )
+        attribute_filters, non_attribute_filters = _get_filter_clauses_for_search_traces(
+            filter_string, session, self._get_dialect()
+        )
 
         # Start with base query
         query = session.query(SqlTraceInfo.request_id).filter(
@@ -2941,9 +2934,22 @@ class SqlAlchemyStore(AbstractStore):
 
         # Apply non-attribute filters (joins with subqueries)
         for non_attr_filter in non_attribute_filters:
-            query = query.filter(
-                SqlTraceInfo.request_id.in_(session.query(non_attr_filter.c.trace_id))
-            )
+            # Check which column to use based on the subquery type
+            if hasattr(non_attr_filter.c, "trace_id"):
+                # For span subqueries and count subqueries
+                query = query.filter(
+                    SqlTraceInfo.request_id.in_(session.query(non_attr_filter.c.trace_id))
+                )
+            elif hasattr(non_attr_filter.c, "request_id"):
+                # For tag/metadata subqueries
+                query = query.filter(
+                    SqlTraceInfo.request_id.in_(session.query(non_attr_filter.c.request_id))
+                )
+            else:
+                # For feedback subqueries (SqlAssessments)
+                query = query.filter(
+                    SqlTraceInfo.request_id.in_(session.query(non_attr_filter.c.trace_id))
+                )
 
         return query.subquery()
 
