@@ -822,3 +822,66 @@ def test_trace_search_filter_feedback_value_type_inference():
     )
     assert parsed[0]["value"] == ("a", "b", "c")
     assert isinstance(parsed[0]["value"], tuple)
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "parsed_filter"),
+    [
+        # span.type filters
+        (
+            "span.type = 'LLM'",
+            [{"type": "span", "key": "type", "comparator": "=", "value": "LLM"}],
+        ),
+        (
+            "span.type != 'CHAIN'",
+            [{"type": "span", "key": "type", "comparator": "!=", "value": "CHAIN"}],
+        ),
+        (
+            "span.type IN ('LLM', 'CHAIN')",
+            [{"type": "span", "key": "type", "comparator": "IN", "value": ("LLM", "CHAIN")}],
+        ),
+        (
+            "span.type NOT IN ('UNKNOWN')",
+            [{"type": "span", "key": "type", "comparator": "NOT IN", "value": ("UNKNOWN",)}],
+        ),
+        # span.content filters
+        (
+            "span.content LIKE '%hello%'",
+            [{"type": "span", "key": "content", "comparator": "LIKE", "value": "%hello%"}],
+        ),
+        (
+            "span.content ILIKE '%WORLD%'",
+            [{"type": "span", "key": "content", "comparator": "ILIKE", "value": "%WORLD%"}],
+        ),
+    ],
+)
+def test_trace_search_filter_with_span(filter_string, parsed_filter):
+    from mlflow.utils.search_utils import SearchTraceUtils
+
+    assert SearchTraceUtils.parse_search_filter_for_search_traces(filter_string) == parsed_filter
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "error_pattern"),
+    [
+        # Invalid comparators for span.content
+        ("span.content = 'test'", "span.content only supports 'LIKE' and 'ILIKE'"),
+        ("span.content > 'test'", "span.content only supports 'LIKE' and 'ILIKE'"),
+        ("span.content IN ('test')", "span.content only supports 'LIKE' and 'ILIKE'"),
+        ("span.content != 'test'", "span.content only supports 'LIKE' and 'ILIKE'"),
+        # Invalid comparators for span.type
+        ("span.type > 'LLM'", "span.type comparator '>' not one of"),
+        ("span.type < 'LLM'", "span.type comparator '<' not one of"),
+        ("span.type LIKE '%LLM%'", "span.type comparator 'LIKE' not one of"),
+        ("span.type ILIKE '%llm%'", "span.type comparator 'ILIKE' not one of"),
+        # Invalid span attributes
+        ("span.invalid = 'test'", "Invalid span attribute 'invalid'"),
+        ("span.name = 'test'", "Invalid span attribute 'name'"),
+        ("span.status = 'OK'", "Invalid span attribute 'status'"),
+    ],
+)
+def test_trace_search_filter_span_invalid_comparators(filter_string, error_pattern):
+    from mlflow.utils.search_utils import SearchTraceUtils
+
+    with pytest.raises(MlflowException, match=error_pattern):
+        SearchTraceUtils.parse_search_filter_for_search_traces(filter_string)

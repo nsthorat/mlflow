@@ -1629,6 +1629,7 @@ class SearchTraceUtils(SearchUtils):
     _TAG_IDENTIFIER = "tag"
     _ATTRIBUTE_IDENTIFIER = "attribute"
     _FEEDBACK_IDENTIFIER = "feedback"
+    _SPAN_IDENTIFIER = "span"
 
     # These are aliases for the base identifiers
     # e.g. trace.status is equivalent to attribute.status
@@ -1643,6 +1644,7 @@ class SearchTraceUtils(SearchUtils):
         _REQUEST_METADATA_IDENTIFIER,
         _ATTRIBUTE_IDENTIFIER,
         _FEEDBACK_IDENTIFIER,
+        _SPAN_IDENTIFIER,
     }
     _VALID_IDENTIFIERS = _IDENTIFIERS | set(_ALTERNATE_IDENTIFIERS.keys())
 
@@ -1691,6 +1693,13 @@ class SearchTraceUtils(SearchUtils):
             # TODO: Implement in-memory feedback filtering of traces
             raise MlflowException(
                 "Feedback filtering requires database support and cannot be performed "
+                "on in-memory trace data.",
+                error_code=INVALID_PARAMETER_VALUE,
+            )
+        elif cls.is_span(type_, key, comparator):
+            # TODO: Implement in-memory span filtering of traces
+            raise MlflowException(
+                "Span filtering requires database support and cannot be performed "
                 "on in-memory trace data.",
                 error_code=INVALID_PARAMETER_VALUE,
             )
@@ -1758,6 +1767,34 @@ class SearchTraceUtils(SearchUtils):
                 raise MlflowException(
                     f"Invalid comparator '{comparator}' not one of "
                     f"'{cls.VALID_FEEDBACK_COMPARATORS}'",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
+            return True
+        return False
+
+    @classmethod
+    def is_span(cls, key_type, key_name, comparator):
+        if key_type == cls._SPAN_IDENTIFIER:
+            # span.content only supports LIKE/ILIKE
+            if key_name == "content":
+                if comparator not in {"LIKE", "ILIKE"}:
+                    raise MlflowException(
+                        f"span.content only supports 'LIKE' and 'ILIKE' comparators, "
+                        f"got '{comparator}'",
+                        error_code=INVALID_PARAMETER_VALUE,
+                    )
+            # span.type supports all string comparators
+            elif key_name == "type":
+                if comparator not in cls.VALID_STRING_ATTRIBUTE_COMPARATORS:
+                    raise MlflowException(
+                        f"span.type comparator '{comparator}' not one of "
+                        f"'{cls.VALID_STRING_ATTRIBUTE_COMPARATORS}'",
+                        error_code=INVALID_PARAMETER_VALUE,
+                    )
+            else:
+                raise MlflowException(
+                    f"Invalid span attribute '{key_name}'. "
+                    "Supported attributes are 'type' and 'content'.",
                     error_code=INVALID_PARAMETER_VALUE,
                 )
             return True
@@ -1929,6 +1966,19 @@ class SearchTraceUtils(SearchUtils):
                     f"Invalid feedback value type. Got value {token.value}",
                     error_code=INVALID_PARAMETER_VALUE,
                 )
+        elif identifier_type == cls._SPAN_IDENTIFIER:
+            # Span only supports string values
+            if token.ttype in cls.STRING_VALUE_TYPES or isinstance(token, Identifier):
+                return cls._strip_quotes(token.value, expect_quoted_value=True)
+            elif isinstance(token, Parenthesis):
+                return cls._parse_attribute_lists(token)
+            else:
+                raise MlflowException(
+                    "Expected a quoted string value for "
+                    f"{identifier_type} (e.g. 'my-value'). Got value "
+                    f"{token.value}",
+                    error_code=INVALID_PARAMETER_VALUE,
+                )
         else:
             # Expected to be either "param" or "metric".
             raise MlflowException(
@@ -1975,6 +2025,10 @@ class SearchTraceUtils(SearchUtils):
         # Validate feedback comparator based on value type
         if comp.get("type") == cls._FEEDBACK_IDENTIFIER:
             cls.validate_feedback_comparator(comp["comparator"], comp["value"])
+
+        # Validate span comparator based on key
+        if comp.get("type") == cls._SPAN_IDENTIFIER:
+            cls.is_span(comp["type"], comp["key"], comp["comparator"])
 
         return comp
 

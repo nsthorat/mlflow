@@ -3183,6 +3183,37 @@ def _get_filter_clauses_for_search_traces(filter_string, session, dialect):
                 non_attribute_filters.append(
                     session.query(SqlAssessments).filter(*feedback_filters).subquery()
                 )
+            elif SearchTraceUtils.is_span(key_type, key_name, comparator):
+                # Handle span filtering
+                from mlflow.store.tracking.dbmodels.models import SqlSpan
+
+                # Build the span filter
+                span_filters = []
+
+                if key_name == "type":
+                    # Direct column comparison for span.type
+                    val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                        SqlSpan.type, value
+                    )
+                elif key_name == "content":
+                    # JSON content search for span.content
+                    if dialect == POSTGRES:
+                        # PostgreSQL: Use ->> to extract text from JSON
+                        val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                            sa.cast(SqlSpan.content, sa.Text), value
+                        )
+                    else:
+                        # SQLite/MySQL: content is already text
+                        val_filter = SearchTraceUtils.get_sql_comparison_func(comparator, dialect)(
+                            SqlSpan.content, value
+                        )
+
+                span_filters.append(val_filter)
+
+                # Create subquery for spans
+                non_attribute_filters.append(
+                    session.query(SqlSpan).filter(*span_filters).subquery()
+                )
             else:
                 raise MlflowException(
                     f"Invalid search expression type '{key_type}'",

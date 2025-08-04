@@ -4710,6 +4710,150 @@ def test_search_traces_with_invalid_feedback_filter(store, filter_string, error)
         )
 
 
+@pytest.mark.parametrize(
+    ("filter_string", "expected_ids"),
+    [
+        # span.type filtering
+        ("span.type = 'LLM'", ["tr-0", "tr-2"]),
+        ("span.type = 'CHAIN'", ["tr-1"]),
+        ("span.type != 'LLM'", ["tr-1", "tr-3"]),
+        ("span.type IN ('LLM', 'CHAIN')", ["tr-0", "tr-1", "tr-2"]),
+        ("span.type NOT IN ('UNKNOWN')", ["tr-0", "tr-1", "tr-2"]),
+        # span.content filtering
+        ("span.content LIKE '%hello%'", ["tr-0", "tr-1"]),
+        ("span.content LIKE '%world%'", ["tr-1", "tr-2"]),
+        ("span.content ILIKE '%HELLO%'", ["tr-0", "tr-1"]),
+        # Combining with other filters
+        ("span.type = 'LLM' AND status = 'OK'", ["tr-0"]),
+        ("span.content LIKE '%hello%' AND name = 'bbb'", []),
+    ],
+)
+def test_search_traces_with_span_filter(store, filter_string, expected_ids):
+    # Create experiments and traces
+    exp1 = store.create_experiment("exp1")
+    exp2 = store.create_experiment("exp2")
+
+    # Create traces
+    _create_trace(
+        store, "tr-0", exp1, request_time=0, state=TraceState.OK, tags={"mlflow.traceName": "aaa"}
+    )
+    _create_trace(
+        store,
+        "tr-1",
+        exp1,
+        request_time=1,
+        state=TraceState.ERROR,
+        tags={"mlflow.traceName": "aaa"},
+    )
+    _create_trace(
+        store,
+        "tr-2",
+        exp1,
+        request_time=2,
+        state=TraceState.STATE_UNSPECIFIED,
+        tags={"mlflow.traceName": "bbb"},
+    )
+    _create_trace(
+        store, "tr-3", exp2, request_time=3, state=TraceState.OK, tags={"mlflow.traceName": "ccc"}
+    )
+
+    # Add spans to traces using log_spans
+    from mlflow.entities import Span
+
+    # tr-0: LLM span with "hello" in content
+    span0 = Span(
+        trace_id="tr-0",
+        span_id="span-0",
+        name="test_llm",
+        parent_span_id=None,
+        start_time_ns=0,
+        end_time_ns=1000,
+        status="OK",
+        inputs={"prompt": "hello there"},
+        outputs={"response": "hi"},
+        attributes={"type": "LLM"},
+    )
+    store.log_spans([span0])
+
+    # tr-1: CHAIN span with "hello world" in content
+    span1 = Span(
+        trace_id="tr-1",
+        span_id="span-1",
+        name="test_chain",
+        parent_span_id=None,
+        start_time_ns=0,
+        end_time_ns=2000,
+        status="ERROR",
+        inputs={"text": "hello world"},
+        outputs={"result": "error"},
+        attributes={"type": "CHAIN"},
+    )
+    store.log_spans([span1])
+
+    # tr-2: LLM span with "world" in content
+    span2 = Span(
+        trace_id="tr-2",
+        span_id="span-2",
+        name="test_llm2",
+        parent_span_id=None,
+        start_time_ns=0,
+        end_time_ns=3000,
+        status="OK",
+        inputs={"prompt": "world peace"},
+        outputs={"response": "yes"},
+        attributes={"type": "LLM"},
+    )
+    store.log_spans([span2])
+
+    # tr-3: UNKNOWN span with no match
+    span3 = Span(
+        trace_id="tr-3",
+        span_id="span-3",
+        name="test_unknown",
+        parent_span_id=None,
+        start_time_ns=0,
+        end_time_ns=4000,
+        status="OK",
+        inputs={"data": "test"},
+        outputs={"result": "ok"},
+        attributes={"type": "UNKNOWN"},
+    )
+    store.log_spans([span3])
+
+    # Search with span filter
+    trace_infos, _ = store.search_traces(
+        experiment_ids=[exp1, exp2],
+        filter_string=filter_string,
+        max_results=10,
+    )
+    actual_ids = [trace_info.trace_id for trace_info in trace_infos]
+    assert actual_ids == expected_ids
+
+
+@pytest.mark.parametrize(
+    ("filter_string", "error"),
+    [
+        # Invalid comparators for span.content
+        ("span.content = 'test'", "span.content only supports 'LIKE' and 'ILIKE'"),
+        ("span.content > 'test'", "span.content only supports 'LIKE' and 'ILIKE'"),
+        ("span.content IN ('test')", "span.content only supports 'LIKE' and 'ILIKE'"),
+        # Invalid comparators for span.type
+        ("span.type > 'LLM'", "span.type comparator '>' not one of"),
+        ("span.type LIKE '%LLM%'", "span.type comparator 'LIKE' not one of"),
+        # Invalid span attributes
+        ("span.invalid = 'test'", "Invalid span attribute 'invalid'"),
+    ],
+)
+def test_search_traces_with_invalid_span_filter(store, filter_string, error):
+    exp1 = store.create_experiment("exp1")
+
+    with pytest.raises(MlflowException, match=error):
+        store.search_traces(
+            experiment_ids=[exp1],
+            filter_string=filter_string,
+        )
+
+
 def test_set_and_delete_tags(store: SqlAlchemyStore):
     exp1 = store.create_experiment("exp1")
     trace_id = "tr-123"
