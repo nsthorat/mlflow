@@ -914,8 +914,8 @@ class AbstractStore:
     def calculate_trace_filter_correlation(
         self,
         experiment_ids: list[str],
-        filter1: str,
-        filter2: str,
+        filter_string1: str,
+        filter_string2: str,
     ) -> TraceFilterCorrelation:
         """
         Calculate the correlation (NPMI) between two trace filter conditions.
@@ -926,8 +926,8 @@ class AbstractStore:
 
         Args:
             experiment_ids: List of experiment IDs to search traces in.
-            filter1: First filter condition (e.g., "span.status = 'ERROR'").
-            filter2: Second filter condition (e.g., "count(span.type = 'TOOL') > 5").
+            filter_string1: First filter condition (e.g., "span.status = 'ERROR'").
+            filter_string2: Second filter condition (e.g., "count(span.type = 'TOOL') > 5").
 
         Returns:
             TraceFilterCorrelation object containing:
