@@ -11,6 +11,7 @@ from mlflow.entities import (
     LoggedModelParameter,
     LoggedModelStatus,
     LoggedModelTag,
+    TraceFilterCorrelation,
     ViewType,
 )
 from mlflow.entities.metric import MetricWithRunId
@@ -907,5 +908,34 @@ class AbstractStore:
 
         Raises:
             ValueError: If spans belong to different traces.
+        """
+        raise NotImplementedError(self.__class__.__name__)
+
+    def calculate_trace_filter_correlation(
+        self,
+        experiment_ids: list[str],
+        filter1: str,
+        filter2: str,
+    ) -> TraceFilterCorrelation:
+        """
+        Calculate the correlation (NPMI) between two trace filter conditions.
+
+        This method computes the Normalized Pointwise Mutual Information (NPMI)
+        between traces matching two different filter conditions, which measures
+        how often the conditions co-occur compared to chance.
+
+        Args:
+            experiment_ids: List of experiment IDs to search traces in.
+            filter1: First filter condition (e.g., "span.status = 'ERROR'").
+            filter2: Second filter condition (e.g., "count(span.type = 'TOOL') > 5").
+
+        Returns:
+            TraceFilterCorrelation object containing:
+            - npmi: Correlation score from -1 to 1
+            - confidence intervals (if available)
+            - support counts for both filters and their intersection
+
+        Raises:
+            MlflowException: If filter syntax is invalid or experiments don't exist.
         """
         raise NotImplementedError(self.__class__.__name__)

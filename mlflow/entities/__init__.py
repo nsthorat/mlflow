@@ -42,6 +42,7 @@ from mlflow.entities.span_event import SpanEvent
 from mlflow.entities.span_status import SpanStatus, SpanStatusCode
 from mlflow.entities.trace import Trace
 from mlflow.entities.trace_data import TraceData
+from mlflow.entities.trace_filter_correlation import TraceFilterCorrelation
 from mlflow.entities.trace_info import TraceInfo
 from mlflow.entities.trace_location import (
     InferenceTableLocation,
@@ -101,4 +102,5 @@ __all__ = [
     "AssessmentSourceType",
     "Expectation",
     "Feedback",
+    "TraceFilterCorrelation",
 ]
