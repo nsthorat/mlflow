@@ -1688,10 +1688,11 @@ class SearchTraceUtils(SearchUtils):
         elif cls.is_attribute(type_, key, comparator):
             lhs = getattr(trace, key)
         elif cls.is_feedback(type_, comparator):
-            # Feedback filtering is not supported in FileStore
+            # This method is only used by FileStore for client-side filtering
+            # Feedback filtering requires database joins, so we can't support it here
             raise MlflowException(
-                "Feedback filtering is not supported with file-based backend stores. "
-                "Please use a database-backed store (e.g., SQLite) for this functionality.",
+                "Feedback filtering requires database support and cannot be performed "
+                "on in-memory trace data.",
                 error_code=INVALID_PARAMETER_VALUE,
             )
         elif sed.get("type") == cls._TAG_IDENTIFIER:

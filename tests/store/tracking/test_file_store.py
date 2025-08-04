@@ -3393,6 +3393,29 @@ def test_search_traces_invalid_filter(generate_trace_infos, filter_string, error
         store.search_traces([exp_id], filter_string)
 
 
+def test_search_traces_feedback_filter_not_supported(store):
+    """Test that FileStore rejects feedback filtering with appropriate error."""
+    exp_id = store.create_experiment("test")
+
+    # Test various feedback filter formats
+    feedback_filters = [
+        "feedback.is_correct = true",
+        "feedback.score > 0.5",
+        'feedback.category = "helpful"',
+        "feedback.rating IN (1, 2, 3)",
+    ]
+
+    for filter_string in feedback_filters:
+        with pytest.raises(
+            MlflowException,
+            match="Feedback filtering is not supported with file-based backend stores",
+        ):
+            store.search_traces([exp_id], filter_string)
+
+    # Verify non-feedback filters still work
+    store.search_traces([exp_id], filter_string='name = "test"')  # Should not raise
+
+
 def test_search_traces_order(generate_trace_infos):
     trace_infos = generate_trace_infos.trace_infos
     store = generate_trace_infos.store
