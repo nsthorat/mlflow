@@ -1,2 +1,9 @@
-# Backward compatibility import for mlflow.claude_code
-# This module has been moved to mlflow.cli.claude_code
+"""Claude Code integration for MLflow.
+
+This module provides automatic tracing of Claude Code conversations to MLflow.
+
+Usage:
+    mlflow autolog claude [directory] [options]
+
+After setup, use the regular 'claude' command and traces will be automatically captured.
+"""
