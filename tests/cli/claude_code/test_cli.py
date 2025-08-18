@@ -3,7 +3,7 @@
 import pytest
 from click.testing import CliRunner
 
-from mlflow.cli.claude_code.cli import commands
+from mlflow.cli.claude_code import commands
 
 
 @pytest.fixture
