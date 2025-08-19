@@ -707,15 +707,8 @@ cli.add_command(mlflow.runs.commands)
 cli.add_command(mlflow.db.commands)
 
 # Add traces CLI commands
-from mlflow import traces_cli
-cli.add_command(traces_cli.commands)
-
-# Add Claude Code integration commands
-try:
-    from mlflow import claude_code_cli
-    cli.add_command(claude_code_cli.commands)
-except ImportError:
-    pass
+from mlflow.cli import traces
+cli.add_command(traces.commands)
 
 # We are conditional loading these commands since the skinny client does
 # not support them due to the pandas and numpy dependencies of MLflow Models

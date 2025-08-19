@@ -3,7 +3,7 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-from mlflow.traces_cli import commands
+from mlflow.cli.traces import commands
 from mlflow.entities import AssessmentSourceType
 
 # Table cell formatting tests are in tests/utils/test_string_utils.py
