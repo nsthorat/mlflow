@@ -708,6 +708,7 @@ cli.add_command(mlflow.db.commands)
 
 # Add traces CLI commands
 from mlflow.cli import traces
+
 cli.add_command(traces.commands)
 
 # We are conditional loading these commands since the skinny client does

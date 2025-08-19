@@ -38,15 +38,15 @@ def split_path_respecting_backticks(path: str) -> list[str]:
     current = ""
 
     while i < len(path):
-        if i < len(path) and path[i] == '`':
+        if i < len(path) and path[i] == "`":
             # Start of backticked segment - read until closing backtick
             i += 1  # Skip opening backtick
-            while i < len(path) and path[i] != '`':
+            while i < len(path) and path[i] != "`":
                 current += path[i]
                 i += 1
             if i < len(path):
                 i += 1  # Skip closing backtick
-        elif path[i] == '.':
+        elif path[i] == ".":
             if current:
                 parts.append(current)
                 current = ""

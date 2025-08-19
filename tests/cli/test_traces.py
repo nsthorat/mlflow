@@ -212,11 +212,9 @@ def test_field_validation_error_verbose_mode(runner):
             "trace_id": "tr-123",
             "state": "OK",
             "request_time": 1700000000000,
-            "assessments": [{"id": "a1"}]
+            "assessments": [{"id": "a1"}],
         },
-        "data": {
-            "spans": [{"name": "span1"}]
-        }
+        "data": {"spans": [{"name": "span1"}]},
     }
 
     # Create a mock trace object with a to_dict method
@@ -251,4 +249,3 @@ def test_field_validation_error_verbose_mode(runner):
         assert "info.request_time" in result.output
         # Should NOT show the tip about --verbose since we're already using it
         assert "Tip: Use --verbose" not in result.output
-
