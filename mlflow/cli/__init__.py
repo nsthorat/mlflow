@@ -13,7 +13,6 @@ from click import UsageError
 import mlflow.deployments.cli
 import mlflow.store.artifact.cli
 from mlflow import db, experiments, projects, runs, version
-from mlflow.cli import traces
 from mlflow.entities import ViewType
 from mlflow.entities.lifecycle_stage import LifecycleStage
 from mlflow.environment_variables import MLFLOW_EXPERIMENT_ID, MLFLOW_EXPERIMENT_NAME
@@ -703,6 +702,8 @@ cli.add_command(experiments.commands)
 cli.add_command(mlflow.store.artifact.cli.commands)
 cli.add_command(runs.commands)
 cli.add_command(db.commands)
+# Add traces CLI commands
+from mlflow.cli import traces
 cli.add_command(traces.commands)
 
 # Add Claude Code integration commands
