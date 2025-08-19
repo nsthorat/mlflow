@@ -3,6 +3,7 @@ import pytest
 from mlflow.utils.jsonpath_utils import (
     filter_json_by_fields,
     jsonpath_extract_values,
+    split_path_respecting_backticks,
     validate_field_paths,
 )
 
@@ -47,6 +48,60 @@ class TestJsonPathUtils:
         data = {"info": {"trace_id": "tr-123"}}
         values = jsonpath_extract_values(data, "info.metadata.user")
         assert values == []
+
+    def test_split_path_respecting_backticks(self):
+        """Test splitting paths with backtick-escaped segments."""
+        # Simple path without backticks
+        assert split_path_respecting_backticks("info.trace_id") == ["info", "trace_id"]
+
+        # Path with backticked segment containing dots
+        assert split_path_respecting_backticks("info.tags.`mlflow.traceName`") == [
+            "info", "tags", "mlflow.traceName"
+        ]
+
+        # Multiple backticked segments
+        assert split_path_respecting_backticks("`field.one`.middle.`field.two`") == [
+            "field.one", "middle", "field.two"
+        ]
+
+        # Backticks at the beginning
+        assert split_path_respecting_backticks("`mlflow.traceName`.value") == [
+            "mlflow.traceName", "value"
+        ]
+
+        # Backticks at the end
+        assert split_path_respecting_backticks("info.`mlflow.traceName`") == [
+            "info", "mlflow.traceName"
+        ]
+
+    def test_jsonpath_extract_values_with_backticks(self):
+        """Test extraction with backtick-escaped field names containing dots."""
+        # Field name with dot
+        data = {"tags": {"mlflow.traceName": "test_trace"}}
+        values = jsonpath_extract_values(data, "tags.`mlflow.traceName`")
+        assert values == ["test_trace"]
+
+        # Nested structure with dotted field names
+        data = {
+            "info": {
+                "tags": {
+                    "mlflow.traceName": "my_trace",
+                    "user.id": "user123"
+                }
+            }
+        }
+        assert jsonpath_extract_values(data, "info.tags.`mlflow.traceName`") == ["my_trace"]
+        assert jsonpath_extract_values(data, "info.tags.`user.id`") == ["user123"]
+
+        # Mixed regular and backticked fields
+        data = {
+            "metadata": {
+                "mlflow.source.type": "NOTEBOOK",
+                "regular_field": "value"
+            }
+        }
+        assert jsonpath_extract_values(data, "metadata.`mlflow.source.type`") == ["NOTEBOOK"]
+        assert jsonpath_extract_values(data, "metadata.regular_field") == ["value"]
 
     def test_jsonpath_extract_values_empty_array(self):
         """Test extraction from empty arrays."""

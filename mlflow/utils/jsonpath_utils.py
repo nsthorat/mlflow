@@ -23,13 +23,55 @@ tailored specifically for MLflow trace data structures.
 from typing import Any
 
 
+def split_path_respecting_backticks(path: str) -> list[str]:
+    """
+    Split path on dots, but keep backticked segments intact.
+
+    Args:
+        path: Path string like 'info.tags.`mlflow.traceName`'
+
+    Returns:
+        List of path segments, e.g., ['info', 'tags', 'mlflow.traceName']
+    """
+    parts = []
+    i = 0
+    current = ""
+
+    while i < len(path):
+        if i < len(path) and path[i] == '`':
+            # Start of backticked segment - read until closing backtick
+            i += 1  # Skip opening backtick
+            while i < len(path) and path[i] != '`':
+                current += path[i]
+                i += 1
+            if i < len(path):
+                i += 1  # Skip closing backtick
+        elif path[i] == '.':
+            if current:
+                parts.append(current)
+                current = ""
+            i += 1
+        else:
+            current += path[i]
+            i += 1
+
+    if current:
+        parts.append(current)
+
+    return parts
+
+
 def jsonpath_extract_values(obj: dict[str, Any], path: str) -> list[Any]:
     """
     Extract values from nested dict using JSONPath-like dot notation with * wildcard support.
 
+    Supports backtick escaping for field names containing dots:
+        'info.tags.`mlflow.traceName`' - treats 'mlflow.traceName' as a single field
+
     Args:
         obj: The dictionary/object to traverse
         path: Dot-separated path like 'info.trace_id' or 'data.spans.*.name'
+              Can use backticks for fields with dots: 'info.tags.`mlflow.traceName`'
 
     Returns:
         List of values found at the path. Returns empty list if path not found.
@@ -40,8 +82,11 @@ def jsonpath_extract_values(obj: dict[str, Any], path: str) -> list[Any]:
         ['tr-123']
         >>> jsonpath_extract_values(data, "info.*")
         ['tr-123', 'OK']
+        >>> data = {"tags": {"mlflow.traceName": "test"}}
+        >>> jsonpath_extract_values(data, "tags.`mlflow.traceName`")
+        ['test']
     """
-    parts = path.split(".")
+    parts = split_path_respecting_backticks(path)
 
     def traverse(current, parts_remaining):
         if not parts_remaining:
@@ -101,7 +146,7 @@ def filter_json_by_fields(data: dict[str, Any], field_paths: list[str]) -> dict[
 
     # Build the result by including only the specified paths
     for path in expanded_paths:
-        parts = path.split(".")
+        parts = split_path_respecting_backticks(path)
         set_nested_value(result, parts, get_nested_value_safe(data, parts))
 
     return result
@@ -109,7 +154,7 @@ def filter_json_by_fields(data: dict[str, Any], field_paths: list[str]) -> dict[
 
 def find_matching_paths(data: dict[str, Any], wildcard_path: str) -> list[str]:
     """Find all actual paths in data that match a wildcard pattern."""
-    parts = wildcard_path.split(".")
+    parts = split_path_respecting_backticks(wildcard_path)
 
     def find_paths(current_data, current_parts, current_path=""):
         if not current_parts:

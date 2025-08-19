@@ -104,7 +104,7 @@ def commands():
     info.request_preview                    # Truncated request preview
     info.response_preview                   # Truncated response preview
     info.trace_metadata.mlflow.*           # MLflow-specific metadata
-    info.trace_metadata.user.*             # User-defined metadata
+    info.trace_metadata.*                  # Custom metadata fields
     info.tags.mlflow.traceName             # Trace name tag
     info.tags.<key>                         # Custom tags
     info.assessments.*.assessment_id        # Assessment identifiers
@@ -115,7 +115,7 @@ def commands():
     info.assessments.*.expectation.value    # Expected values
     info.assessments.*.source.source_type   # HUMAN, LLM_JUDGE, CODE
     info.assessments.*.source.source_id     # Source identifier
-    info.token_usage.*                      # Token usage statistics (optional)
+    info.token_usage                        # Token usage (property, not searchable via fields)
     data.spans.*.span_id                    # Individual span IDs
     data.spans.*.name                       # Span operation names
     data.spans.*.parent_id                  # Parent span relationships
@@ -148,7 +148,7 @@ def commands():
       data.spans.*.name                       # Span operation names
       data.spans.*.attributes.mlflow.spanType # Span types
       data.spans.*.events.*.name              # Event names
-      info.trace_id,info.state,info.execution_duration_ms  # Multiple fields
+      info.trace_id,info.state,info.execution_duration  # Multiple fields
     """
 
 
@@ -298,7 +298,7 @@ def search_traces(
             "info.trace_id",
             "info.request_time",
             "info.state",
-            "info.execution_duration_ms",
+            "info.execution_duration",
             "info.request_preview",
             "info.response_preview",
         ]
@@ -647,13 +647,10 @@ def get_assessment(trace_id, assessment_id):
 @commands.command("update-assessment")
 @TRACE_ID
 @click.option("--assessment-id", type=click.STRING, required=True, help="Assessment ID to update")
-@click.option(
-    "--name", type=click.STRING, help="Updated assessment name (NOTE: Cannot be changed once set)"
-)
 @click.option("--value", type=click.STRING, help="Updated assessment value (JSON)")
 @click.option("--rationale", type=click.STRING, help="Updated rationale")
 @click.option("--metadata", type=click.STRING, help="Updated metadata as JSON")
-def update_assessment(trace_id, assessment_id, name, value, rationale, metadata):
+def update_assessment(trace_id, assessment_id, value, rationale, metadata):
     """
     Update an existing assessment.
 
@@ -688,13 +685,6 @@ def update_assessment(trace_id, assessment_id, name, value, rationale, metadata)
     parsed_metadata = metadata
     if metadata:
         parsed_metadata = json.loads(metadata)
-
-    # Warn user if they tried to update the name (not allowed by backend)
-    if name and name != existing.name:
-        click.echo(
-            "⚠️  WARNING: Assessment names cannot be changed once set. Ignoring --name parameter.",
-            err=True,
-        )
 
     # Create updated assessment - determine if it's feedback or expectation
     if hasattr(existing, "feedback"):
