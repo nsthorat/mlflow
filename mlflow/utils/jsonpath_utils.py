@@ -234,8 +234,16 @@ def set_nested_value(data: dict[str, Any], parts: list[str], value):
             current[final_part] = value
 
 
-def validate_field_paths(field_paths: list[str], sample_data: dict[str, Any]):
-    """Validate that field paths exist in the data structure."""
+def validate_field_paths(
+    field_paths: list[str], sample_data: dict[str, Any], verbose: bool = False
+):
+    """Validate that field paths exist in the data structure.
+
+    Args:
+        field_paths: List of field paths to validate
+        sample_data: Sample data to validate against
+        verbose: If True, show all available fields instead of truncated list
+    """
     invalid_paths = []
 
     for path in field_paths:
@@ -261,21 +269,40 @@ def validate_field_paths(field_paths: list[str], sample_data: dict[str, Any]):
 
         if available_fields:
             error_msg += "\n\n📋 Available fields in this data:\n"
-            # Group by top-level key for better readability
-            info_fields = [f for f in available_fields if f.startswith("info.")]
-            data_fields = [f for f in available_fields if f.startswith("data.")]
 
-            if info_fields:
-                error_msg += f"   info.*: {', '.join(info_fields[:8])}"
-                if len(info_fields) > 8:
-                    error_msg += f", ... (+{len(info_fields) - 8} more)"
-                error_msg += "\n"
+            if verbose:
+                # In verbose mode, show ALL available fields organized by category
+                info_fields = [f for f in available_fields if f.startswith("info.")]
+                data_fields = [f for f in available_fields if f.startswith("data.")]
 
-            if data_fields:
-                error_msg += f"   data.*: {', '.join(data_fields[:5])}"
-                if len(data_fields) > 5:
-                    error_msg += f", ... (+{len(data_fields) - 5} more)"
-                error_msg += "\n"
+                if info_fields:
+                    error_msg += "   Info fields:\n"
+                    for field in sorted(info_fields):
+                        error_msg += f"     • {field}\n"
+
+                if data_fields:
+                    error_msg += "   Data fields:\n"
+                    for field in sorted(data_fields):
+                        error_msg += f"     • {field}\n"
+            else:
+                # Non-verbose mode: show truncated list
+                # Group by top-level key for better readability
+                info_fields = [f for f in available_fields if f.startswith("info.")]
+                data_fields = [f for f in available_fields if f.startswith("data.")]
+
+                if info_fields:
+                    error_msg += f"   info.*: {', '.join(info_fields[:8])}"
+                    if len(info_fields) > 8:
+                        error_msg += f", ... (+{len(info_fields) - 8} more)"
+                    error_msg += "\n"
+
+                if data_fields:
+                    error_msg += f"   data.*: {', '.join(data_fields[:5])}"
+                    if len(data_fields) > 5:
+                        error_msg += f", ... (+{len(data_fields) - 5} more)"
+                    error_msg += "\n"
+
+                error_msg += "\n💡 Tip: Use --verbose flag to see all available fields"
 
         raise ValueError(error_msg)
 

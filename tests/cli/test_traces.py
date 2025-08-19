@@ -201,4 +201,54 @@ def test_field_validation_error(runner):
 
         assert result.exit_code != 0
         assert "Invalid field path" in result.output
+        # Check for the tip about verbose mode
+        assert "--verbose" in result.output
+
+
+def test_field_validation_error_verbose_mode(runner):
+    """Test that verbose mode shows all available fields."""
+    mock_trace = {
+        "info": {
+            "trace_id": "tr-123",
+            "state": "OK",
+            "request_time": 1700000000000,
+            "assessments": [{"id": "a1"}]
+        },
+        "data": {
+            "spans": [{"name": "span1"}]
+        }
+    }
+
+    # Create a mock trace object with a to_dict method
+    mock_trace_obj = mock.Mock()
+    mock_trace_obj.to_dict.return_value = mock_trace
+
+    # Create a mock result that acts like a list but also has a token attribute
+    mock_result = mock.Mock()
+    mock_result.__iter__ = lambda self: iter([mock_trace_obj])
+    mock_result.__getitem__ = lambda self, i: mock_trace_obj if i == 0 else None
+    mock_result.__len__ = lambda self: 1
+    mock_result.__bool__ = lambda self: True
+    mock_result.token = None
+
+    # Patch the TracingClient at the module level where it's imported
+    with mock.patch("mlflow.cli.traces.TracingClient") as mock_client:
+        mock_instance = mock.Mock()
+        mock_client.return_value = mock_instance
+        mock_instance.search_traces.return_value = mock_result
+
+        # Use --verbose flag
+        result = runner.invoke(
+            commands,
+            ["search", "--experiment-id", "1", "--extract-fields", "invalid.field", "--verbose"],
+        )
+
+        assert result.exit_code != 0
+        assert "Invalid field path" in result.output
+        # In verbose mode, we should see ALL the fields listed
+        assert "info.trace_id" in result.output
+        assert "info.state" in result.output
+        assert "info.request_time" in result.output
+        # Should NOT show the tip about --verbose since we're already using it
+        assert "Tip: Use --verbose" not in result.output
 

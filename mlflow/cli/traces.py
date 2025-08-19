@@ -218,6 +218,11 @@ Available fields:
     "Comma-separated for multiple fields. "
     "Defaults to standard columns for table mode, all fields for JSON mode.",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Show all available fields in error messages when invalid fields are specified.",
+)
 def search_traces(
     experiment_id,
     filter_string,
@@ -230,6 +235,7 @@ def search_traces(
     sql_warehouse_id,
     output,
     extract_fields,
+    verbose,
 ):
     """
     Search for traces in the specified experiment.
@@ -286,7 +292,7 @@ def search_traces(
         # Validate fields against actual trace data
         if traces:
             try:
-                validate_field_paths(field_list, traces[0].to_dict())
+                validate_field_paths(field_list, traces[0].to_dict(), verbose=verbose)
             except ValueError as e:
                 raise click.UsageError(str(e))
     elif output == "json":
@@ -349,7 +355,12 @@ def search_traces(
     "Comma-separated for multiple fields. "
     "If not specified, returns all trace data.",
 )
-def get_trace(trace_id, extract_fields):
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Show all available fields in error messages when invalid fields are specified.",
+)
+def get_trace(trace_id, extract_fields, verbose):
     """
     All trace details will print to stdout as JSON format.
 
@@ -371,7 +382,7 @@ def get_trace(trace_id, extract_fields):
         field_list = [f.strip() for f in extract_fields.split(",")]
         # Validate fields against trace data
         try:
-            validate_field_paths(field_list, trace_dict)
+            validate_field_paths(field_list, trace_dict, verbose=verbose)
         except ValueError as e:
             raise click.UsageError(str(e))
         # Filter to selected fields only

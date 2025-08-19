@@ -234,7 +234,7 @@ class TestJsonPathUtils:
             "info": {
                 "trace_id": "tr-abc123def",
                 "state": "OK",
-                "execution_duration_ms": 1500,
+                "execution_duration": 1500,
                 "assessments": [
                     {
                         "assessment_id": "a-123",
