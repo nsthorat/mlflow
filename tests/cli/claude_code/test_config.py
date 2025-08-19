@@ -1,11 +1,11 @@
-"""Tests for mlflow.cli.claude_code.config module."""
+"""Tests for mlflow.claude_code_cli.config module."""
 
 import json
 import os
 
 import pytest
 
-from mlflow.cli.claude_code.config import (
+from mlflow.claude_code_cli.config import (
     MLFLOW_TRACING_ENABLED,
     get_env_var,
     get_tracing_status,

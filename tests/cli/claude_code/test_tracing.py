@@ -1,9 +1,9 @@
-"""Simplified tests for mlflow.cli.claude_code.tracing module."""
+"""Simplified tests for mlflow.claude_code_cli.tracing module."""
 
 import os
 
 # Test only the functions we can easily test without external dependencies
-from mlflow.cli.claude_code.tracing import (
+from mlflow.claude_code_cli.tracing import (
     parse_timestamp_to_ns,
     setup_logging,
 )
@@ -50,7 +50,7 @@ def test_setup_logging_creates_logger(tmp_path):
 
         # Verify logger was created
         assert logger is not None
-        assert logger.name == "mlflow.cli.claude_code.tracing"
+        assert logger.name == "mlflow.claude_code_cli.tracing"
 
         # Verify log directory was created
         log_dir = tmp_path / ".claude" / "mlflow"

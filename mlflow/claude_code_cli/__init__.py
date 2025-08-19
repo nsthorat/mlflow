@@ -4,8 +4,8 @@ from pathlib import Path
 
 import click
 
-from mlflow.cli.claude_code.config import get_tracing_status, setup_environment_config
-from mlflow.cli.claude_code.hooks import disable_tracing_hooks, setup_hooks_config
+from mlflow.claude_code_cli.config import get_tracing_status, setup_environment_config
+from mlflow.claude_code_cli.hooks import disable_tracing_hooks, setup_hooks_config
 
 
 @click.group("autolog")

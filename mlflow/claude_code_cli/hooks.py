@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from mlflow.cli.claude_code.config import (
+from mlflow.claude_code_cli.config import (
     HOOK_FIELD_COMMAND,
     HOOK_FIELD_HOOKS,
     MLFLOW_HOOK_IDENTIFIER,
@@ -28,7 +28,7 @@ def upsert_hook(config: dict[str, Any], hook_type: str, handler_name: str) -> No
         config[HOOK_FIELD_HOOKS][hook_type] = []
 
     hook_command = (
-        f'python -c "from mlflow.cli.claude_code.hooks import {handler_name}; {handler_name}()"'
+        f'python -c "from mlflow.claude_code_cli.hooks import {handler_name}; {handler_name}()"'
     )
 
     mlflow_hook = {"type": "command", HOOK_FIELD_COMMAND: hook_command}
@@ -115,7 +115,7 @@ def disable_tracing_hooks(settings_path: Path) -> bool:
                 hooks_removed = True
 
     # Remove config variables
-    from mlflow.cli.claude_code.config import (
+    from mlflow.claude_code_cli.config import (
         ENVIRONMENT_FIELD,
         MLFLOW_EXPERIMENT_ID,
         MLFLOW_EXPERIMENT_NAME,
@@ -158,7 +158,7 @@ def disable_tracing_hooks(settings_path: Path) -> bool:
 
 def stop_hook_handler() -> None:
     """Hook handler for conversation end - processes transcript and creates trace."""
-    from mlflow.cli.claude_code.tracing import (
+    from mlflow.claude_code_cli.tracing import (
         get_logger,
         is_tracing_enabled,
         output_hook_response,

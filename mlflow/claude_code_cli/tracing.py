@@ -79,7 +79,7 @@ def setup_mlflow() -> None:
         return
 
     import mlflow
-    from mlflow.cli.claude_code.config import get_env_var
+    from mlflow.claude_code_cli.config import get_env_var
     from mlflow.environment_variables import (
         MLFLOW_EXPERIMENT_ID,
         MLFLOW_EXPERIMENT_NAME,
@@ -110,7 +110,7 @@ def is_tracing_enabled() -> bool:
         get_logger().error("MLflow not available: %s", e)
         return False
 
-    from mlflow.cli.claude_code.config import MLFLOW_TRACING_ENABLED, get_env_var
+    from mlflow.claude_code_cli.config import MLFLOW_TRACING_ENABLED, get_env_var
 
     return get_env_var(MLFLOW_TRACING_ENABLED).lower() in ("true", "1", "yes")
 

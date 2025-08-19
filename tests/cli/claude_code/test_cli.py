@@ -1,9 +1,9 @@
-"""Simplified tests for mlflow.cli.claude_code.cli module."""
+"""Simplified tests for mlflow.claude_code_cli.cli module."""
 
 import pytest
 from click.testing import CliRunner
 
-from mlflow.cli.claude_code import commands
+from mlflow.claude_code_cli import commands
 
 
 @pytest.fixture

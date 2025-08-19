@@ -10,9 +10,12 @@ from datetime import timedelta
 import click
 from click import UsageError
 
+import mlflow.db
 import mlflow.deployments.cli
+import mlflow.experiments
+import mlflow.runs
 import mlflow.store.artifact.cli
-from mlflow import db, experiments, projects, runs, version
+from mlflow import projects, version
 from mlflow.entities import ViewType
 from mlflow.entities.lifecycle_stage import LifecycleStage
 from mlflow.environment_variables import MLFLOW_EXPERIMENT_ID, MLFLOW_EXPERIMENT_NAME
@@ -698,21 +701,22 @@ def doctor(mask_envs):
 
 
 cli.add_command(mlflow.deployments.cli.commands)
-cli.add_command(experiments.commands)
+cli.add_command(mlflow.experiments.commands)
 cli.add_command(mlflow.store.artifact.cli.commands)
-cli.add_command(runs.commands)
-cli.add_command(db.commands)
+cli.add_command(mlflow.runs.commands)
+cli.add_command(mlflow.db.commands)
+
 # Add traces CLI commands
-from mlflow.cli import traces
-cli.add_command(traces.commands)
+from mlflow import traces_cli
+cli.add_command(traces_cli.commands)
 
 # Add Claude Code integration commands
 try:
-    from mlflow.cli import claude_code as claude_cli
-
-    cli.add_command(claude_cli.commands)
+    from mlflow import claude_code_cli
+    cli.add_command(claude_code_cli.commands)
 except ImportError:
     pass
+
 # We are conditional loading these commands since the skinny client does
 # not support them due to the pandas and numpy dependencies of MLflow Models
 try:
