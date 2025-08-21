@@ -9,10 +9,11 @@ import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
-from typing import Any, Optional, TypedDict
+from typing import Any, Callable, Dict, List, Optional, TypedDict, Union
 
 import sqlalchemy
 import sqlalchemy.orm
+from sqlalchemy.orm import Session
 import sqlalchemy.sql.expression as sql
 from sqlalchemy import and_, func, sql, text
 from sqlalchemy.future import select
@@ -3004,6 +3005,47 @@ class SqlAlchemyStore(AbstractStore):
         # Run the blocking database operations in a thread pool
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(SqlAlchemyStore._executor, self._log_spans_sync, spans)
+
+    def execute_query(self, query_func: Union[str, Callable[[Session], Any]]) -> Union[List[Dict[str, Any]], Any]:
+        """
+        Execute a custom query function with managed session and error handling.
+        
+        This method provides direct access to the SQLAlchemy session while maintaining
+        all the store's transaction management, error handling, and retry logic.
+        
+        Args:
+            query_func: Either a SQL string or a function that takes a SQLAlchemy session
+                       as argument and returns query results.
+                       
+        Returns:
+            For SQL strings: List of dicts representing rows
+            For functions: The result returned by query_func
+            
+        Raises:
+            MlflowException: If the query fails or encounters database errors.
+            
+        Example with SQL string:
+            result = store.execute_query("SELECT COUNT(*) as count FROM trace_info")
+            # Returns: [{'count': 42}]
+            
+        Example with function:
+            def get_trace_stats(session):
+                from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
+                from sqlalchemy import func
+                return session.query(func.count(SqlTraceInfo.request_id)).scalar()
+                
+            total_traces = store.execute_query(get_trace_stats)
+        """
+        with self.ManagedSessionMaker() as session:
+            if callable(query_func):
+                return query_func(session)
+            else:
+                # Execute raw SQL string
+                from sqlalchemy import text
+                result = session.execute(text(query_func))
+                if result.returns_rows:
+                    return [dict(row) for row in result.mappings()]
+                return result.rowcount
 
 
 def _get_sqlalchemy_filter_clauses(parsed, session, dialect):

@@ -3241,11 +3241,60 @@ def get_endpoints(get_handler=get_handler):
     Returns:
         List of tuples (path, handler, methods)
     """
+    # Import trace insights handlers here to avoid circular import
+    from mlflow.server.trace_insights.rest_handlers import (
+        # Traffic & Cost handlers
+        traffic_volume_handler,
+        traffic_latency_handler,
+        traffic_errors_handler,
+        # Assessment handlers
+        assessment_discovery_handler,
+        assessment_metrics_handler,
+        # Tool handlers
+        tool_discovery_handler,
+        tool_metrics_handler,
+        # Tag handlers
+        tag_discovery_handler,
+        tag_metrics_handler,
+        # Dimension & Correlation handlers
+        dimension_discovery_handler,
+        calculate_npmi_handler,
+        correlations_handler,
+    )
+    
+    # Define trace insights endpoints - matching the UI's expected paths
+    trace_insights_endpoints = [
+        # Traffic & Cost endpoints
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume"), traffic_volume_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency"), traffic_latency_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors"), traffic_errors_handler, ["POST"]),
+        
+        # Quality/Assessment endpoints
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/quality/assessments/discovery"), assessment_discovery_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/quality/assessments/metrics"), assessment_metrics_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/assessments/data"), assessment_metrics_handler, ["POST"]),
+        
+        # Tools endpoints
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/tools/discovery"), tool_discovery_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/tools/metrics"), tool_metrics_handler, ["POST"]),
+        
+        # Tags endpoints
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/tags/discovery"), tag_discovery_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/tags/values"), tag_metrics_handler, ["POST"]),  # May need custom handler for values
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/tags/metrics"), tag_metrics_handler, ["POST"]),
+        
+        # Correlations & Dimensions endpoints
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/correlations"), correlations_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/dimensions/discovery"), dimension_discovery_handler, ["POST"]),
+        (_add_static_prefix("/ajax-api/2.0/mlflow/traces/insights/dimensions/npmi"), calculate_npmi_handler, ["POST"]),
+    ]
+    
     return (
         get_service_endpoints(MlflowService, get_handler)
         + get_service_endpoints(ModelRegistryService, get_handler)
         + get_service_endpoints(MlflowArtifactsService, get_handler)
         + [(_add_static_prefix("/graphql"), _graphql, ["GET", "POST"])]
+        + trace_insights_endpoints
     )
 
 

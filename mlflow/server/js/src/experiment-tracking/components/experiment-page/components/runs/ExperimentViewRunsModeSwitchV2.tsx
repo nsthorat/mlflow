@@ -5,12 +5,11 @@ import { FormattedMessage } from 'react-intl';
 import { Link } from '../../../../../common/utils/RoutingUtils';
 import Routes from '../../../../routes';
 import type { ExperimentViewRunsCompareMode } from '../../../../types';
-import { EXPERIMENT_PAGE_VIEW_MODE_QUERY_PARAM_KEY } from '../../hooks/useExperimentPageViewMode';
+import { EXPERIMENT_PAGE_VIEW_MODE_QUERY_PARAM_KEY, useExperimentPageViewMode } from '../../hooks/useExperimentPageViewMode';
 import { shouldUseRenamedUnifiedTracesTab } from '../../../../../common/utils/FeatureUtils';
 import { ExperimentPageTabName } from '../../../../constants';
 
 export interface ExperimentViewRunsModeSwitchProps {
-  explicitViewMode?: ExperimentViewRunsCompareMode;
   experimentId?: string;
   activeTab: ExperimentPageTabName;
 }
@@ -22,6 +21,7 @@ export interface ExperimentViewRunsModeSwitchProps {
  */
 export const ExperimentViewRunsModeSwitchV2 = ({ experimentId = '', activeTab }: ExperimentViewRunsModeSwitchProps) => {
   const { theme } = useDesignSystemTheme();
+  const [viewMode] = useExperimentPageViewMode();
 
   const getLinkToMode = (mode: ExperimentViewRunsCompareMode) =>
     [Routes.getExperimentPageRoute(experimentId), [EXPERIMENT_PAGE_VIEW_MODE_QUERY_PARAM_KEY, mode].join('=')].join(
@@ -107,6 +107,16 @@ export const ExperimentViewRunsModeSwitchV2 = ({ experimentId = '', activeTab }:
             />
           </Link>
         </NavigationMenu.Item>
+        {viewMode === 'INSIGHTS' && (
+          <NavigationMenu.Item key="INSIGHTS">
+            <Link to={getLinkToMode('INSIGHTS')}>
+              <FormattedMessage
+                defaultMessage="Insights"
+                description="A button enabling insights mode on the experiment page"
+              />
+            </Link>
+          </NavigationMenu.Item>
+        )}
       </NavigationMenu.List>
     </NavigationMenu.Root>
   );

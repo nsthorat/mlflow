@@ -156,6 +156,19 @@ export const ExperimentViewRunsModeSwitch = ({
         }
         key="TRACES"
       />
+      {viewMode === 'INSIGHTS' && (
+        <LegacyTabs.TabPane
+          tab={
+            <span data-testid="experiment-runs-mode-switch-insights">
+              <FormattedMessage
+                defaultMessage="Insights"
+                description="A button enabling insights mode on the experiment page"
+              />
+            </span>
+          }
+          key="INSIGHTS"
+        />
+      )}
     </LegacyTabs>
   );
 };

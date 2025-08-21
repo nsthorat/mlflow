@@ -51,6 +51,10 @@ IS_FLASK_V1 = Version(importlib.metadata.version("flask")) < Version("2.0")
 for http_path, handler, methods in handlers.get_endpoints():
     app.add_url_rule(http_path, handler.__name__, handler, methods=methods)
 
+# Register trace insights routes
+from mlflow.server.trace_insights import register_trace_insights_routes
+register_trace_insights_routes(app)
+
 if os.getenv(PROMETHEUS_EXPORTER_ENV_VAR):
     from mlflow.server.prometheus_exporter import activate_prometheus_exporter
 

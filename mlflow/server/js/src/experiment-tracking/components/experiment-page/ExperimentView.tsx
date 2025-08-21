@@ -262,6 +262,11 @@ export const ExperimentView = ({ showHeader = true }: { showHeader?: boolean }) 
     if (viewMode === 'TRACES') {
       return <ExperimentViewTraces experimentIds={experimentIds} />;
     }
+    
+    if (viewMode === 'INSIGHTS') {
+      const { InsightsView } = require('../insights');
+      return <InsightsView experimentId={experimentIds[0]} />;
+    }
 
     return (
       <ExperimentViewRuns
