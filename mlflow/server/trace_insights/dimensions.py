@@ -18,6 +18,7 @@ from mlflow.server.trace_insights.models import (
     DimensionParameter,
     CorrelationItem
 )
+from mlflow.server.trace_insights.tag_utils import should_filter_tag
 
 
 def discover_dimensions(
@@ -68,6 +69,10 @@ def discover_dimensions(
         
         tag_dimensions = []
         for row in tag_query:
+            # Filter out built-in MLflow tags using shared utility
+            if should_filter_tag(row.key):
+                continue
+                
             # Determine data type based on values
             sample_values = session.query(SqlTraceTag.value).filter(
                 and_(

@@ -8,6 +8,7 @@ import {
   PlusMinusSquareIcon,
   UserIcon,
   TextBoxIcon,
+  ChartLineIcon,
 } from '@databricks/design-system';
 import { ExperimentPageTabName } from '@mlflow/mlflow/src/experiment-tracking/constants';
 import { FormattedMessage } from 'react-intl';
@@ -46,6 +47,17 @@ const ModelsTabConfig = {
   ),
   icon: <ModelsIcon />,
   getRoute: (experimentId: string) => Routes.getExperimentPageTabRoute(experimentId, ExperimentPageTabName.Models),
+};
+
+export const InsightsTabConfig = {
+  label: (
+    <FormattedMessage
+      defaultMessage="Insights"
+      description="Label for the insights tab in the MLflow experiment navbar"
+    />
+  ),
+  icon: <ChartLineIcon />,
+  getRoute: (experimentId: string) => `${Routes.getExperimentPageTabRoute(experimentId, ExperimentPageTabName.Traces)}?compareRunsMode=INSIGHTS`,
 };
 
 export const GenAIExperimentTabConfigMap: TabConfigMap = {

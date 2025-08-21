@@ -25,6 +25,7 @@ import {
   NPMIRequest, NPMIResponse,
   CorrelationsRequest, CorrelationsResponse,
 } from '../types/insights';
+import { useInsightsTimeRange } from './useInsightsTimeRange';
 
 // Base URL for all insights API calls
 const INSIGHTS_API_BASE = '/ajax-api/2.0/mlflow/traces/insights';
@@ -57,11 +58,20 @@ async function postInsightsApi<TRequest, TResponse>(
 
 /**
  * Hook for fetching trace volume data
+ * Automatically includes time range parameters from URL state
  */
 export function useTraceVolume(
-  request: VolumeRequest,
+  baseRequest: Omit<VolumeRequest, 'start_time' | 'end_time'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<VolumeResponse> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  const request: VolumeRequest = {
+    ...baseRequest,
+    start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+  };
+
   return useQuery({
     queryKey: ['trace-insights', 'traffic', 'volume', request],
     queryFn: () => postInsightsApi<VolumeRequest, VolumeResponse>('/traffic-cost/volume', request),
@@ -73,11 +83,20 @@ export function useTraceVolume(
 
 /**
  * Hook for fetching latency percentile data
+ * Automatically includes time range parameters from URL state
  */
 export function useTraceLatency(
-  request: LatencyRequest,
+  baseRequest: Omit<LatencyRequest, 'start_time' | 'end_time'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<LatencyResponse> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  const request: LatencyRequest = {
+    ...baseRequest,
+    start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+  };
+
   return useQuery({
     queryKey: ['trace-insights', 'traffic', 'latency', request],
     queryFn: () => postInsightsApi<LatencyRequest, LatencyResponse>('/traffic-cost/latency', request),
@@ -89,11 +108,20 @@ export function useTraceLatency(
 
 /**
  * Hook for fetching error rate data
+ * Automatically includes time range parameters from URL state
  */
 export function useTraceErrors(
-  request: ErrorRequest,
+  baseRequest: Omit<ErrorRequest, 'start_time' | 'end_time'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<ErrorResponse> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  const request: ErrorRequest = {
+    ...baseRequest,
+    start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+  };
+
   return useQuery({
     queryKey: ['trace-insights', 'traffic', 'errors', request],
     queryFn: () => postInsightsApi<ErrorRequest, ErrorResponse>('/traffic-cost/errors', request),
@@ -186,7 +214,16 @@ export function useAssessmentData(
 export function useToolDiscovery(
   request: { experiment_ids: string[]; limit?: number },
   options?: { enabled?: boolean }
-): UseQueryResult<{ tools: Array<{ name: string; trace_count: number; invocation_count: number; error_count: number; avg_latency_ms?: number | null }> }> {
+): UseQueryResult<{ tools: Array<{ 
+  name: string; 
+  trace_count: number; 
+  invocation_count: number; 
+  error_count: number; 
+  avg_latency_ms?: number | null;
+  p50_latency?: number | null;
+  p90_latency?: number | null;
+  p99_latency?: number | null;
+}> }> {
   return useQuery({
     queryKey: ['trace-insights', 'tools', 'discovery', request],
     queryFn: () => postInsightsApi('/tools/discovery', request),
@@ -201,7 +238,14 @@ export function useToolDiscovery(
 export function useToolMetrics(
   request: { tool_name: string; experiment_ids: string[]; time_bucket?: string },
   options?: { enabled?: boolean; refetchInterval?: number }
-): UseQueryResult<{ time_series: Array<{ time_bucket: string; count: number; error_count: number; p50_latency?: number }> }> {
+): UseQueryResult<{ time_series: Array<{ 
+  time_bucket: string; 
+  count: number; 
+  error_count: number; 
+  p50_latency?: number;
+  p90_latency?: number;
+  p99_latency?: number;
+}> }> {
   return useQuery({
     queryKey: ['trace-insights', 'tools', 'metrics', request],
     queryFn: () => postInsightsApi('/tools/metrics', request),

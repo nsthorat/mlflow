@@ -13,9 +13,11 @@ import { InsightsPageTools } from './pages/tools/InsightsPageTools';
 import { InsightsPageTags } from './pages/tags/InsightsPageTags';
 import { InsightsPageBaseProps } from './types/insightsTypes';
 import { useInsightsPageMode, type InsightsPageMode } from './hooks/useInsightsPageMode';
+import { InsightsTimeConfigProvider } from './hooks/useInsightsTimeContext';
+import { InsightsToolbar } from './components/InsightsToolbar';
 
 interface InsightsViewProps extends InsightsPageBaseProps {
-  // Additional props can be added here
+  subpage?: string | null;
 }
 
 interface NavigationItem {
@@ -34,8 +36,9 @@ const navigationItems: NavigationItem[] = [
   { id: 'create', label: 'Create View', icon: '➕', implemented: false },
 ];
 
-export const InsightsView: React.FC<InsightsViewProps> = ({
-  experimentId
+const InsightsViewImpl: React.FC<InsightsViewProps> = ({
+  experimentId,
+  subpage
 }) => {
   const { theme } = useDesignSystemTheme();
   const [activePage, setActivePage] = useInsightsPageMode();
@@ -95,119 +98,106 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
         height: '100%',
         width: '100%',
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection: 'column',
         background: theme.colors.backgroundPrimary,
       }}
     >
-      {/* Left Sidebar Navigation */}
-      <div
-        css={{
-          width: '240px',
-          borderRight: `1px solid ${theme.colors.border}`,
-          background: theme.colors.backgroundSecondary,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: theme.spacing.sm,
-        }}
-      >
-        <div
-          css={{
-            padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-            marginBottom: theme.spacing.sm,
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <h3
-            css={{
-              margin: 0,
-              fontSize: theme.typography.fontSizeLg,
-              fontWeight: 600,
-              color: theme.colors.textPrimary,
-            }}
-          >
-            Trace Insights
-          </h3>
-        </div>
+      {/* Top Toolbar */}
+      <InsightsToolbar />
 
-        {/* Navigation Items */}
-        <nav css={{ flex: 1 }}>
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              css={{
-                width: '100%',
-                padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-                border: 'none',
-                background: activePage === item.id 
-                  ? theme.colors.actionDefaultBackgroundPress 
-                  : 'transparent',
-                color: activePage === item.id 
-                  ? theme.colors.textPrimary 
-                  : item.implemented 
-                    ? theme.colors.textSecondary 
-                    : theme.colors.textPlaceholder,
-                borderRadius: theme.general.borderRadiusBase,
-                cursor: item.implemented ? 'pointer' : 'not-allowed',
-                fontSize: theme.typography.fontSizeBase,
-                fontWeight: activePage === item.id ? 600 : 400,
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: theme.spacing.xs,
-                marginBottom: theme.spacing.xs,
-                transition: 'all 0.2s ease',
-                '&:hover': item.implemented ? {
-                  background: activePage !== item.id 
-                    ? theme.colors.actionDefaultBackgroundHover 
-                    : undefined,
-                } : {},
-              }}
-              onClick={() => item.implemented && setActivePage(item.id)}
-              disabled={!item.implemented}
-            >
-              {item.icon && <span>{item.icon}</span>}
-              <span>{item.label}</span>
-              {!item.implemented && (
-                <span
-                  css={{
-                    marginLeft: 'auto',
-                    fontSize: theme.typography.fontSizeSm,
-                    color: theme.colors.textPlaceholder,
-                    fontStyle: 'italic',
-                  }}
-                >
-                  Soon
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* Footer Info */}
-        <div
-          css={{
-            padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-            borderTop: `1px solid ${theme.colors.border}`,
-            fontSize: theme.typography.fontSizeSm,
-            color: theme.colors.textSecondary,
-          }}
-        >
-          <div>Experiment: {experimentId || 'None'}</div>
-          <div>Backend: SQLAlchemy</div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
+      {/* Main Content - Sidebar + Main Area */}
       <div
         css={{
           flex: 1,
-          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
+          overflow: 'hidden',
         }}
       >
-        {renderActivePage()}
+        {/* Left Sidebar Navigation */}
+        <div
+          css={{
+            width: '240px',
+            borderRight: `1px solid ${theme.colors.border}`,
+            background: theme.colors.backgroundSecondary,
+            display: 'flex',
+            flexDirection: 'column',
+            padding: theme.spacing.sm,
+          }}
+        >
+          {/* Navigation Items */}
+          <nav css={{ flex: 1 }}>
+            {navigationItems.map((item) => (
+              <button
+                key={item.id}
+                css={{
+                  width: '100%',
+                  padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
+                  border: 'none',
+                  background: activePage === item.id 
+                    ? theme.colors.actionDefaultBackgroundPress 
+                    : 'transparent',
+                  color: activePage === item.id 
+                    ? theme.colors.textPrimary 
+                    : item.implemented 
+                      ? theme.colors.textSecondary 
+                      : theme.colors.textPlaceholder,
+                  borderRadius: theme.general.borderRadiusBase,
+                  cursor: item.implemented ? 'pointer' : 'not-allowed',
+                  fontSize: theme.typography.fontSizeBase,
+                  fontWeight: activePage === item.id ? 600 : 400,
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.xs,
+                  marginBottom: theme.spacing.xs,
+                  transition: 'all 0.2s ease',
+                  '&:hover': item.implemented ? {
+                    background: activePage !== item.id 
+                      ? theme.colors.actionDefaultBackgroundHover 
+                      : undefined,
+                  } : {},
+                }}
+                onClick={() => item.implemented && setActivePage(item.id)}
+                disabled={!item.implemented}
+              >
+                {item.icon && <span>{item.icon}</span>}
+                <span>{item.label}</span>
+                {!item.implemented && (
+                  <span
+                    css={{
+                      marginLeft: 'auto',
+                      fontSize: theme.typography.fontSizeSm,
+                      color: theme.colors.textPlaceholder,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    Soon
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Main Content Area */}
+        <div
+          css={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {renderActivePage()}
+        </div>
       </div>
     </div>
   );
 };
+
+export const InsightsView: React.FC<InsightsViewProps> = (props) => (
+  <InsightsTimeConfigProvider>
+    <InsightsViewImpl {...props} />
+  </InsightsTimeConfigProvider>
+);

@@ -7,6 +7,8 @@
 import React from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
 import { useTraceErrors, useErrorCorrelations } from '../../hooks/useInsightsApi';
+import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
+import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
@@ -19,11 +21,17 @@ interface InsightsErrorRateCardProps {
 export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardProps) => {
   const { theme } = useDesignSystemTheme();
   
+  // Get chart time domain from global time range
+  const { xDomain } = useInsightsChartTimeRange();
+  
+  // Get automatic time bucket based on time range duration
+  const timeBucket = useTimeBucket();
+  
   // Fetch error data using React Query hook
   const { data: errorData, isLoading, error } = useTraceErrors(
     {
       experiment_ids: experimentId ? [experimentId] : [],
-      time_bucket: 'hour',
+      time_bucket: timeBucket,
     },
     { refetchInterval: 30000 } // Auto-refresh every 30 seconds
   );
@@ -53,9 +61,10 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
   }
 
   // Transform time series data for chart
+  // Backend already provides error_rate as percentage (0-100), so divide by 100 for decimal format
   const chartData = errorData.time_series.map(point => ({
     timeBucket: new Date(point.time_bucket),
-    value: point.error_rate,
+    value: point.error_rate / 100, // Convert percentage to decimal for .1% format
   }));
 
   // Transform correlations for display
@@ -132,6 +141,7 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
           title="Error Rate Over Time"
           lineColors={[theme.colors.textValidationDanger]}
           height={250}
+          xDomain={xDomain}
         />
       </div>
 

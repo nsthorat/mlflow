@@ -1,4 +1,4 @@
-import { useDesignSystemTheme, Tabs } from '@databricks/design-system';
+import { useDesignSystemTheme } from '@databricks/design-system';
 
 import { useExperimentTraces } from './hooks/useExperimentTraces';
 import { TracesViewTable } from './TracesViewTable';
@@ -14,7 +14,7 @@ import { useActiveExperimentTrace } from './hooks/useActiveExperimentTrace';
 import { useActiveExperimentSpan } from './hooks/useActiveExperimentSpan';
 import { ModelTraceInfo } from '@databricks/web-shared/model-trace-explorer';
 import { InsightsView } from '../insights';
-import { useSearchParams } from 'react-router-dom-v5-compat';
+import { useSearchParams } from 'react-router-dom';
 
 export const TRACE_AUTO_REFRESH_INTERVAL = 30000;
 
@@ -47,19 +47,20 @@ export const TracesView = ({
   baseComponentId?: string;
 }) => {
   const { theme } = useDesignSystemTheme();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const compareRunsMode = searchParams.get('compareRunsMode');
   const insightsSubpage = searchParams.get('insightsSubpage');
   
-  // If an insights subpage is specified, show the insights view
-  if (insightsSubpage) {
-    return <InsightsView experimentId={experimentIds[0]} />;
+  // If compareRunsMode is INSIGHTS, show the insights view
+  if (compareRunsMode === 'INSIGHTS') {
+    return <InsightsView experimentId={experimentIds[0]} subpage={insightsSubpage} />;
   }
   
-  // Otherwise show the normal traces view with a tab to switch to insights
-  return <TracesViewWithInsightsTab {...{ experimentIds, runUuid, loggedModelId, disabledColumns, baseComponentId }} />;
+  // Otherwise show the normal traces view
+  return <TracesViewContent {...{ experimentIds, runUuid, loggedModelId, disabledColumns, baseComponentId }} />;
 };
 
-const TracesViewWithInsightsTab = ({
+const TracesViewContent = ({
   experimentIds,
   runUuid,
   loggedModelId,

@@ -1,15 +1,16 @@
 /**
  * MLflow Trace Insights - Volume Card Component
  * 
- * Uses React Query hooks for data fetching with MANDATORY correlations
+ * Uses React Query hooks for data fetching
  */
 
 import React from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
-import { useTraceVolume, useCorrelations } from '../../hooks/useInsightsApi';
+import { useTraceVolume } from '../../hooks/useInsightsApi';
+import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
+import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
-import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
 import { TrendsCardSkeleton } from '../../components/TrendsSkeleton';
 
 interface InsightsVolumeCardProps {
@@ -19,25 +20,21 @@ interface InsightsVolumeCardProps {
 export const InsightsVolumeCard = ({ experimentId }: InsightsVolumeCardProps) => {
   const { theme } = useDesignSystemTheme();
   
-  // Fetch volume data using React Query hook
+  // Get chart time domain from global time range
+  const { xDomain } = useInsightsChartTimeRange();
+  
+  // Get automatic time bucket based on time range duration
+  const timeBucket = useTimeBucket();
+  
+  // Fetch volume data using React Query hook - time range comes from URL
   const { data: volumeData, isLoading, error } = useTraceVolume(
     {
       experiment_ids: experimentId ? [experimentId] : [],
-      time_bucket: 'hour',
+      time_bucket: timeBucket,
     },
     { refetchInterval: 30000 } // Auto-refresh every 30 seconds
   );
 
-  // Fetch correlations for high-volume periods
-  const { data: correlationsData } = useCorrelations(
-    {
-      experiment_ids: experimentId ? [experimentId] : [],
-      filter_string: 'volume:high',
-      correlation_dimensions: ['tag'],
-      limit: 5,
-    },
-    { enabled: !!volumeData && volumeData.summary.count > 0 }
-  );
 
   if (isLoading) {
     return <TrendsCardSkeleton />;
@@ -65,14 +62,6 @@ export const InsightsVolumeCard = ({ experimentId }: InsightsVolumeCardProps) =>
     errors: point.error_count,
   }));
 
-  // Transform correlations for display
-  const correlations = correlationsData?.data.map(item => ({
-    label: `${item.dimension}: ${item.value}`,
-    count: item.trace_count,
-    npmi: item.npmi_score,
-    percentage: item.percentage_of_slice,
-    type: 'tag' as const,
-  })) || [];
 
   return (
     <InsightsCard
@@ -134,30 +123,11 @@ export const InsightsVolumeCard = ({ experimentId }: InsightsVolumeCardProps) =>
           yAxisTitle="Trace Count"
           title="Volume Over Time"
           height={300}
+          xDomain={xDomain}
+          yAxisFormat="d"
         />
       </div>
 
-      {/* MANDATORY Correlations Section */}
-      {correlations.length > 0 && (
-        <div>
-          <h4 css={{ 
-            margin: `0 0 ${theme.spacing.sm}px 0`,
-            fontSize: '14px',
-            fontWeight: 600,
-            color: theme.colors.textPrimary,
-          }}>
-            Top Correlations
-          </h4>
-          <TrendsCorrelationsChart
-            title="Top Correlations"
-            data={correlations}
-            onItemClick={(item) => {
-              console.log('Correlation clicked:', item);
-              // TODO: Open trace explorer with filter
-            }}
-          />
-        </div>
-      )}
     </InsightsCard>
   );
 };

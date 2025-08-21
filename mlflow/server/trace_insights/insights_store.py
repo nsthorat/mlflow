@@ -41,6 +41,8 @@ from mlflow.server.trace_insights.dimensions import (
     calculate_npmi_score,
     get_correlations_for_filter
 )
+from mlflow.server.trace_insights.time_bucketing import get_time_bucket_expression, validate_time_bucket
+from mlflow.server.trace_insights.tag_utils import should_filter_tag
 
 
 class InsightsStore:
@@ -85,29 +87,13 @@ class InsightsStore:
                 func.sum(case((SqlTraceInfo.status == 'ERROR', 1), else_=0)).label('error_count')
             ).first()
             
-            # Build time bucket expression for SQLite
-            if request.time_bucket == "hour":
-                # Round to hour
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 3600000) * 3600000,
-                    Integer
-                )
-            elif request.time_bucket == "day":
-                # Round to day
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 86400000) * 86400000,
-                    Integer
-                )
-            else:  # week
-                # Round to week
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 604800000) * 604800000,
-                    Integer
-                )
+            # Build time bucket expression using shared utility
+            validated_bucket = validate_time_bucket(request.time_bucket or 'hour')
+            time_bucket_expr = get_time_bucket_expression(validated_bucket)
             
             # Get time series data
             time_series_query = base_query.with_entities(
-                time_bucket_expr.label('time_bucket'),
+                time_bucket_expr,
                 func.count().label('count'),
                 func.sum(case((SqlTraceInfo.status == 'OK', 1), else_=0)).label('ok_count'),
                 func.sum(case((SqlTraceInfo.status == 'ERROR', 1), else_=0)).label('error_count')
@@ -604,7 +590,7 @@ class InsightsStore:
         
         results = self.store.execute_query(query_func)
         
-        # Convert to response format
+        # Convert to response format, filtering out built-in MLflow tags
         tag_infos = [
             TagInfo(
                 tag_key=row.tag_key,
@@ -612,6 +598,7 @@ class InsightsStore:
                 unique_values=row.unique_values
             )
             for row in results
+            if not should_filter_tag(row.tag_key)
         ]
         
         return TagDiscoveryResponse(data=tag_infos)

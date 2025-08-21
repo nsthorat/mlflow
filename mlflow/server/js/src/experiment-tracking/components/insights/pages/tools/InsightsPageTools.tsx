@@ -7,8 +7,10 @@
 
 import React, { useState } from 'react';
 import { useDesignSystemTheme, Button, Switch } from '@databricks/design-system';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate } from 'react-router-dom';
 import { useToolDiscovery, useToolMetrics, useCorrelations } from '../../hooks/useInsightsApi';
+import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
+import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsBarChart } from '../../components/TrendsBarChart';
@@ -16,6 +18,7 @@ import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChar
 import { TrendsCardSkeleton, TrendsEmptyState } from '../../components/TrendsSkeleton';
 import { ExperimentPageTabName } from '../../../../constants';
 import Routes from '../../../../routes';
+import { PERCENTILE_COLORS } from '../../constants/percentileColors';
 
 interface InsightsPageToolsProps {
   experimentId?: string;
@@ -101,8 +104,9 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
           <InsightsCard 
             title="Tool Usage" 
             subtitle="Distribution"
-            action={
+            headerContent={
               <Button
+                componentId="mlflow.insights.tools.view-all-traces"
                 size="small"
                 onClick={() => navigate(getTraceViewUrl(experimentId, 'span.type = "TOOL"'))}
               >
@@ -340,12 +344,18 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
   const navigate = useNavigate();
   const [volumeViewMode, setVolumeViewMode] = useState<'traces' | 'invocations'>('invocations');
   
+  // Get chart time domain from global time range
+  const { xDomain } = useInsightsChartTimeRange();
+  
+  // Get automatic time bucket based on time range duration  
+  const timeBucket = useTimeBucket();
+  
   // Fetch detailed metrics for this tool
   const { data: metricsData } = useToolMetrics(
     {
       tool_name: tool.name,
       experiment_ids: experimentId ? [experimentId] : [],
-      time_bucket: 'hour',
+      time_bucket: timeBucket,
     },
     { refetchInterval: 30000 }
   );
@@ -371,19 +381,10 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
       {/* Volume Column */}
       <InsightsCard
         title={tool.name}
-        subtitle={
-          <div css={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-            <span>{`${tool.trace_count} traces • ${tool.invocation_count} invocations`}</span>
-            <Switch
-              size="small"
-              checked={volumeViewMode === 'invocations'}
-              onChange={(checked) => setVolumeViewMode(checked ? 'invocations' : 'traces')}
-            />
-            <span css={{ fontSize: '11px' }}>{volumeViewMode}</span>
-          </div>
-        }
-        action={
+        subtitle={`${tool.trace_count} traces • ${tool.invocation_count} invocations`}
+        headerContent={
           <Button
+            componentId="mlflow.insights.tools.view-traces"
             size="small"
             onClick={() => navigate(getTraceViewUrl(experimentId, `span.name = "${tool.name}" AND span.type = "TOOL"`))}
           >
@@ -395,12 +396,13 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
           <TrendsBarChart
             points={metricsData.time_series.map(point => ({
               timeBucket: new Date(point.time_bucket),
-              value: volumeViewMode === 'invocations' ? point.count : (point.trace_count || point.count),
+              value: point.count,
             }))}
             yAxisTitle={volumeViewMode === 'invocations' ? 'Invocations' : 'Traces'}
             title="Usage Over Time"
             barColor={theme.colors.actionDefaultBackgroundDefault}
             height={200}
+            xDomain={xDomain}
           />
         )}
       </InsightsCard>
@@ -422,8 +424,9 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
           }
           return parts.join(' • ');
         })()}
-        action={
+        headerContent={
           <Button
+            componentId="mlflow.insights.tools.view-traces"
             size="small"
             onClick={() => navigate(getTraceViewUrl(experimentId, `span.name = "${tool.name}" AND span.type = "TOOL"`))}
           >
@@ -433,19 +436,28 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
       >
         {metricsData && metricsData.time_series && metricsData.time_series.length > 0 ? (
           <TrendsLineChart
-            points={metricsData.time_series.map(point => ({
-              timeBucket: new Date(point.time_bucket),
-              values: {
-                P50: point.p50_latency || 0,
-                P90: point.p90_latency || 0,
-                P99: point.p99_latency || 0,
-              }
-            }))}
+            points={[
+              ...metricsData.time_series.map(point => ({
+                timeBucket: new Date(point.time_bucket),
+                value: point.p50_latency || 0,
+                seriesName: 'P50'
+              })),
+              ...metricsData.time_series.map(point => ({
+                timeBucket: new Date(point.time_bucket),
+                value: point.p90_latency || 0,
+                seriesName: 'P90'
+              })),
+              ...metricsData.time_series.map(point => ({
+                timeBucket: new Date(point.time_bucket),
+                value: point.p99_latency || 0,
+                seriesName: 'P99'
+              }))
+            ]}
             yAxisTitle="Latency (ms)"
             title="Latency Percentiles"
-            lineColors={[theme.colors.yellow300, theme.colors.yellow400, theme.colors.yellow500]}
+            lineColors={[PERCENTILE_COLORS.P50, PERCENTILE_COLORS.P90, PERCENTILE_COLORS.P99]}
             height={200}
-            multiLine={true}
+            xDomain={xDomain}
           />
         ) : (
           <div css={{ 
@@ -466,9 +478,10 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
         subtitle={tool.error_count > 0 
           ? `${((tool.error_count / tool.invocation_count) * 100).toFixed(1)}% error rate`
           : 'No errors'}
-        action={
+        headerContent={
           tool.error_count > 0 ? (
             <Button
+              componentId="mlflow.insights.tools.view-error-traces"
               size="small"
               onClick={() => navigate(getTraceViewUrl(experimentId, `span.name = "${tool.name}" AND span.type = "TOOL" AND status = "ERROR"`))}
             >
@@ -489,6 +502,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
                 title="Error Rate Over Time"
                 lineColors={[theme.colors.textValidationDanger]}
                 height={150}
+                xDomain={xDomain}
               />
             )}
             

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Button, PageWrapper, Spacer, ParagraphSkeleton, useDesignSystemTheme } from '@databricks/design-system';
 import { PredefinedError } from '@databricks/web-shared/errors';
 import invariant from 'invariant';
-import { useNavigate, useParams, Outlet, matchPath, useLocation } from '../../../common/utils/RoutingUtils';
+import { useNavigate, useParams, Outlet, matchPath, useLocation, useSearchParams } from '../../../common/utils/RoutingUtils';
 import { ExperimentViewRunsModeSwitchV2 } from '../../components/experiment-page/components/runs/ExperimentViewRunsModeSwitchV2';
 import { useGetExperimentQuery } from '../../hooks/useExperimentQuery';
 import { useExperimentReduxStoreCompat } from '../../hooks/useExperimentReduxStoreCompat';
@@ -27,6 +27,7 @@ import { useNavigateToExperimentPageTab } from '../../components/experiment-page
 
 const ExperimentRunsPage = React.lazy(() => import('../experiment-runs/ExperimentRunsPage'));
 const ExperimentTracesPage = React.lazy(() => import('../experiment-traces/ExperimentTracesPage'));
+const ExperimentInsightsPage = React.lazy(() => import('../experiment-insights/ExperimentInsightsPage'));
 
 const ExperimentLoggedModelListPage = React.lazy(
   () => import('../experiment-logged-models/ExperimentLoggedModelListPage'),
@@ -36,6 +37,8 @@ const ExperimentPageTabsImpl = () => {
   const { experimentId, tabName } = useParams();
   const { theme } = useDesignSystemTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const compareRunsMode = searchParams.get('compareRunsMode');
 
   const { tabName: activeTabByRoute } = useGetExperimentPageActiveTabByRoute();
   const activeTab = activeTabByRoute ?? coerceToEnum(ExperimentPageTabName, tabName, ExperimentPageTabName.Models);
@@ -92,9 +95,20 @@ const ExperimentPageTabsImpl = () => {
   // Check if the user landed on the experiment page without a specific tab (sub-route)...
   const { pathname } = useLocation();
   const matchedExperimentPageWithoutTab = Boolean(matchPath(RoutePaths.experimentPage, pathname));
+  
+  // If compareRunsMode is INSIGHTS and we're not on the insights tab, navigate to insights
+  useEffect(() => {
+    if (compareRunsMode === 'INSIGHTS' && tabName !== ExperimentPageTabName.Insights) {
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(url.search || url.hash.split('?')[1]);
+      const insightsUrl = `${Routes.getExperimentPageTabRoute(experimentId, ExperimentPageTabName.Insights)}?${params.toString()}`;
+      navigate(insightsUrl, { replace: true });
+    }
+  }, [compareRunsMode, experimentId, navigate, tabName]);
+  
   // ...if true, we want to navigate to the appropriate tab based on the experiment kind
   useNavigateToExperimentPageTab({
-    enabled: shouldEnableExperimentPageChildRoutes() && matchedExperimentPageWithoutTab,
+    enabled: shouldEnableExperimentPageChildRoutes() && matchedExperimentPageWithoutTab && compareRunsMode !== 'INSIGHTS',
     experimentId,
   });
 
@@ -186,6 +200,7 @@ const ExperimentPageTabsImpl = () => {
         ) : (
           <>
             {activeTab === ExperimentPageTabName.Traces && <ExperimentTracesPage />}
+            {activeTab === ExperimentPageTabName.Insights && <ExperimentInsightsPage />}
             {activeTab === ExperimentPageTabName.Runs && <ExperimentRunsPage />}
             {activeTab === ExperimentPageTabName.Models && <ExperimentLoggedModelListPage />}
           </>

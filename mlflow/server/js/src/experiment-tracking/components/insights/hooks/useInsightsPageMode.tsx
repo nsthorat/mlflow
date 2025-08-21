@@ -9,8 +9,9 @@ export const getInsightsPageDefaultMode = (): InsightsPageMode => 'traffic';
 /**
  * Hook using search params to retrieve and update the current insights subpage mode.
  * Uses the "insightsSubpage" query parameter to track which insights page is active.
+ * @param initialMode - Optional initial mode to use if no query param is present
  */
-export const useInsightsPageMode = (): [
+export const useInsightsPageMode = (initialMode?: InsightsPageMode): [
   InsightsPageMode,
   (newMode: InsightsPageMode) => void,
 ] => {
@@ -18,6 +19,7 @@ export const useInsightsPageMode = (): [
 
   const mode =
     (params.get(INSIGHTS_SUBPAGE_QUERY_PARAM_KEY) as InsightsPageMode) ||
+    initialMode ||
     getInsightsPageDefaultMode();
 
   const setMode = (newMode: InsightsPageMode) => {

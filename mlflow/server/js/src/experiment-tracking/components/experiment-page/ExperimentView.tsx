@@ -5,9 +5,10 @@ import { ErrorCodes } from '../../../common/constants';
 import NotFoundPage from '../NotFoundPage';
 import { PermissionDeniedView } from '../PermissionDeniedView';
 import { getExperimentApi } from '../../actions';
-import { ExperimentKind } from '../../constants';
+import { ExperimentKind, ExperimentPageTabName } from '../../constants';
 import { ExperimentViewHeaderCompare } from './components/header/ExperimentViewHeaderCompare';
 import { ExperimentViewRuns } from './components/runs/ExperimentViewRuns';
+import { ExperimentViewRunsModeSwitchV2 } from './components/runs/ExperimentViewRunsModeSwitchV2';
 import { useExperiments } from './hooks/useExperiments';
 import { useFetchExperiments } from './hooks/useFetchExperiments';
 import { useElementHeight } from '../../../common/utils/useElementHeight';
@@ -34,6 +35,7 @@ import { ExperimentViewHeader } from './components/header/ExperimentViewHeader';
 import invariant from 'invariant';
 import { useExperimentPageViewMode } from './hooks/useExperimentPageViewMode';
 import { ExperimentViewTraces } from './components/ExperimentViewTraces';
+import { InsightsView } from '../insights';
 import { FormattedMessage } from 'react-intl';
 import { ErrorWrapper } from '../../../common/utils/ErrorWrapper';
 import { NotFoundError, PermissionError } from '@databricks/web-shared/errors';
@@ -55,6 +57,14 @@ export const ExperimentView = ({ showHeader = true }: { showHeader?: boolean }) 
 
   const [searchFacets, experimentIds, isPreview] = useExperimentPageSearchFacets();
   const [viewMode] = useExperimentPageViewMode();
+  
+  // If viewMode is INSIGHTS and header v2 is enabled, we should be on the traces tab
+  // This handles the case when child routes are not enabled
+  useEffect(() => {
+    if (viewMode === 'INSIGHTS' && shouldEnableExperimentPageHeaderV2()) {
+      // The viewMode is already INSIGHTS, so the TracesView will handle rendering InsightsView
+    }
+  }, [viewMode]);
 
   const experiments = useExperiments(experimentIds);
 
@@ -264,7 +274,6 @@ export const ExperimentView = ({ showHeader = true }: { showHeader?: boolean }) 
     }
     
     if (viewMode === 'INSIGHTS') {
-      const { InsightsView } = require('../insights');
       return <InsightsView experimentId={experimentIds[0]} />;
     }
 

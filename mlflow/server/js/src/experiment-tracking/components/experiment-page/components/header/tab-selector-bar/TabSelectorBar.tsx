@@ -17,30 +17,46 @@ import {
   GenAIExperimentWithPromptsTabConfigMap,
   CustomExperimentTabConfigMap,
   DefaultTabConfigMap,
+  InsightsTabConfig,
 } from './TabSelectorBarConstants';
 import { FormattedMessage } from 'react-intl';
 import { useGetExperimentPageActiveTabByRoute } from '../../../hooks/useGetExperimentPageActiveTabByRoute';
 
 const isRunsViewTab = (tabName: string) => ['TABLE', 'CHART', 'ARTIFACT'].includes(tabName);
 const iTracesViewTab = (tabName: string) => ['TRACES'].includes(tabName);
+const isInsightsViewTab = (tabName: string) => ['INSIGHTS'].includes(tabName);
 
-const getExperimentTabsConfig = (experimentKind?: ExperimentKind): TabConfigMap => {
+const getExperimentTabsConfig = (experimentKind?: ExperimentKind, viewMode?: string): TabConfigMap => {
+  let baseConfig: TabConfigMap;
+  
   switch (experimentKind) {
     case ExperimentKind.GENAI_DEVELOPMENT:
     case ExperimentKind.GENAI_DEVELOPMENT_INFERRED:
-      return shouldEnablePromptsTabOnDBPlatform()
+      baseConfig = shouldEnablePromptsTabOnDBPlatform()
         ? GenAIExperimentWithPromptsTabConfigMap
         : GenAIExperimentTabConfigMap;
+      break;
     case ExperimentKind.CUSTOM_MODEL_DEVELOPMENT:
     case ExperimentKind.CUSTOM_MODEL_DEVELOPMENT_INFERRED:
     case ExperimentKind.FORECASTING:
     case ExperimentKind.REGRESSION:
     case ExperimentKind.AUTOML:
     case ExperimentKind.CLASSIFICATION:
-      return CustomExperimentTabConfigMap;
+      baseConfig = CustomExperimentTabConfigMap;
+      break;
     default:
-      return DefaultTabConfigMap;
+      baseConfig = DefaultTabConfigMap;
   }
+  
+  // When in INSIGHTS mode, add the Insights tab to the config
+  if (viewMode === 'INSIGHTS') {
+    return {
+      ...baseConfig,
+      INSIGHTS: InsightsTabConfig,
+    };
+  }
+  
+  return baseConfig;
 };
 
 export const TabSelectorBar = ({ experimentKind }: { experimentKind?: ExperimentKind }) => {
@@ -68,6 +84,8 @@ export const TabSelectorBar = ({ experimentKind }: { experimentKind?: Experiment
       return ExperimentPageTabName.Runs;
     } else if (iTracesViewTab(viewMode)) {
       return ExperimentPageTabName.Traces;
+    } else if (isInsightsViewTab(viewMode)) {
+      return 'INSIGHTS';
     } else {
       return viewMode;
     }
@@ -75,7 +93,7 @@ export const TabSelectorBar = ({ experimentKind }: { experimentKind?: Experiment
 
   const activeTab = tabNameFromRoute ?? tabNameFromParams ?? tabNameFromViewMode;
 
-  const tabsConfig = getExperimentTabsConfig(experimentKind ?? ExperimentKind.NO_INFERRED_TYPE);
+  const tabsConfig = getExperimentTabsConfig(experimentKind ?? ExperimentKind.NO_INFERRED_TYPE, viewMode);
 
   return (
     <SegmentedControlGroup

@@ -290,66 +290,103 @@ def get_tool_latency_over_time(
 ) -> List[ToolLatencyPoint]:
     """
     Get tool latency percentiles over time.
+    Uses SQLite-compatible percentile calculation.
     """
     def latency_query(session):
-        # Time bucket expression
-        if time_bucket == "hour":
-            time_bucket_expr = func.strftime(
-                '%Y-%m-%d %H:00:00',
-                func.datetime(
-                    func.cast(SqlTraceInfo.timestamp_ms / 1000, type_=Integer),
-                    'unixepoch'
-                )
-            ).label('time_bucket')
-        else:
-            time_bucket_expr = func.strftime(
-                '%Y-%m-%d',
-                func.datetime(
-                    func.cast(SqlTraceInfo.timestamp_ms / 1000, type_=Integer),
-                    'unixepoch'
-                )
-            ).label('time_bucket')
+        # Build the SQL query for time-bucketed latency data
+        sql = """
+        SELECT
+            CASE
+                WHEN :time_bucket = 'hour' THEN
+                    strftime('%Y-%m-%d %H:00:00', datetime(s.start_time_unix_nano / 1000000000, 'unixepoch'))
+                ELSE
+                    strftime('%Y-%m-%d', datetime(s.start_time_unix_nano / 1000000000, 'unixepoch'))
+            END as time_bucket,
+            s.name as tool_name,
+            AVG((s.end_time_unix_nano - s.start_time_unix_nano) / 1000000.0) as avg_latency_ms
+        FROM spans s
+        WHERE s.type = 'TOOL'
+        """
         
-        query = session.query(
-            time_bucket_expr,
-            SqlTraceTag.value.label('tool_name'),
-            func.avg(SqlTraceInfo.execution_time_ms).label('avg_latency'),
-            func.percentile_cont(0.5).within_group(SqlTraceInfo.execution_time_ms).label('p50'),
-            func.percentile_cont(0.9).within_group(SqlTraceInfo.execution_time_ms).label('p90'),
-            func.percentile_cont(0.99).within_group(SqlTraceInfo.execution_time_ms).label('p99'),
-        ).join(
-            SqlTraceInfo,
-            SqlTraceTag.request_id == SqlTraceInfo.request_id
-        ).filter(
-            SqlTraceTag.key == 'mlflow.traceName'
-        )
-        
-        # Filters
+        # Add filters
         if experiment_ids:
-            query = query.filter(SqlTraceInfo.experiment_id.in_(experiment_ids))
+            exp_ids_str = ','.join([f"'{exp_id}'" for exp_id in experiment_ids])
+            sql += f" AND s.experiment_id IN ({exp_ids_str})"
+        
         if tool_names:
-            query = query.filter(SqlTraceTag.value.in_(tool_names))
+            tool_names_str = ','.join([f"'{name}'" for name in tool_names])
+            sql += f" AND s.name IN ({tool_names_str})"
+        
         if start_time:
-            query = query.filter(SqlTraceInfo.timestamp_ms >= start_time)
+            sql += f" AND s.start_time_unix_nano >= {start_time * 1000000}"
         if end_time:
-            query = query.filter(SqlTraceInfo.timestamp_ms <= end_time)
+            sql += f" AND s.start_time_unix_nano <= {end_time * 1000000}"
         
-        query = query.group_by('time_bucket', SqlTraceTag.value)
-        query = query.order_by('time_bucket', SqlTraceTag.value)
+        sql += """
+        GROUP BY time_bucket, s.name
+        ORDER BY time_bucket, s.name
+        """
         
-        results = query.all()
+        # Execute the aggregation query
+        result = session.execute(text(sql), {'time_bucket': time_bucket})
+        rows = result.fetchall()
         
-        return [
-            ToolLatencyPoint(
+        # For each time bucket and tool, calculate percentiles
+        latency_points = []
+        for row in rows:
+            # Get all latencies for this time bucket and tool
+            percentile_sql = """
+            SELECT (end_time_unix_nano - start_time_unix_nano) / 1000000.0 as latency_ms
+            FROM spans
+            WHERE type = 'TOOL' AND name = :tool_name
+            """
+            
+            # Add time bucket filter
+            if time_bucket == 'hour':
+                percentile_sql += """
+                AND strftime('%Y-%m-%d %H:00:00', datetime(start_time_unix_nano / 1000000000, 'unixepoch')) = :time_bucket
+                """
+            else:
+                percentile_sql += """
+                AND strftime('%Y-%m-%d', datetime(start_time_unix_nano / 1000000000, 'unixepoch')) = :time_bucket
+                """
+            
+            if experiment_ids:
+                exp_ids_str = ','.join([f"'{exp_id}'" for exp_id in experiment_ids])
+                percentile_sql += f" AND experiment_id IN ({exp_ids_str})"
+            
+            if start_time:
+                percentile_sql += f" AND start_time_unix_nano >= {start_time * 1000000}"
+            if end_time:
+                percentile_sql += f" AND start_time_unix_nano <= {end_time * 1000000}"
+            
+            percentile_sql += " ORDER BY latency_ms"
+            
+            latencies_result = session.execute(
+                text(percentile_sql), 
+                {'tool_name': row.tool_name, 'time_bucket': row.time_bucket}
+            )
+            latencies = [l[0] for l in latencies_result.fetchall() if l[0] is not None]
+            
+            # Calculate percentiles
+            if latencies:
+                n = len(latencies)
+                p50 = latencies[int(n * 0.5)] if n > 0 else 0
+                p90 = latencies[int(n * 0.9)] if n > 0 else 0
+                p99 = latencies[min(int(n * 0.99), n-1)] if n > 0 else 0
+            else:
+                p50 = p90 = p99 = 0
+            
+            latency_points.append(ToolLatencyPoint(
                 time_bucket=row.time_bucket,
                 tool_name=row.tool_name,
-                p50_latency_ms=float(row.p50 or 0),
-                p90_latency_ms=float(row.p90 or 0),
-                p99_latency_ms=float(row.p99 or 0),
-                avg_latency_ms=float(row.avg_latency or 0),
-            )
-            for row in results
-        ]
+                p50_latency_ms=float(p50),
+                p90_latency_ms=float(p90),
+                p99_latency_ms=float(p99),
+                avg_latency_ms=float(row.avg_latency_ms or 0),
+            ))
+        
+        return latency_points
     
     return store.execute_query(latency_query)
 

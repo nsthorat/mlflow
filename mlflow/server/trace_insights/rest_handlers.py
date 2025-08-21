@@ -281,7 +281,9 @@ def tool_metrics_handler():
                 'time_bucket': bucket,
                 'count': 0,
                 'error_count': 0,
-                'p50_latency': None
+                'p50_latency': None,
+                'p90_latency': None,
+                'p99_latency': None
             }
             
             # Add volume data
@@ -300,6 +302,8 @@ def tool_metrics_handler():
             for lat in ts_data.get('latency', []):
                 if lat['time_bucket'] == bucket:
                     point['p50_latency'] = lat.get('p50_latency')
+                    point['p90_latency'] = lat.get('p90_latency')
+                    point['p99_latency'] = lat.get('p99_latency')
                     break
             
             time_series.append(point)

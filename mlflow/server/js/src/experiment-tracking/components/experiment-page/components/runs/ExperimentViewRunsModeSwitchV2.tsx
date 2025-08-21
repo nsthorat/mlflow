@@ -81,7 +81,7 @@ export const ExperimentViewRunsModeSwitchV2 = ({ experimentId = '', activeTab }:
           },
         }}
       >
-        <NavigationMenu.Item key="RUNS">
+        <NavigationMenu.Item key="RUNS" active={viewMode === 'TABLE' || viewMode === 'CHART'}>
           <Link to={getLinkToMode('TABLE')}>
             <FormattedMessage
               defaultMessage="Runs"
@@ -98,8 +98,8 @@ export const ExperimentViewRunsModeSwitchV2 = ({ experimentId = '', activeTab }:
             <PreviewBadge />
           </Link>
         </NavigationMenu.Item>
-        <NavigationMenu.Item key="ARTIFACT">{evaluationTabLink}</NavigationMenu.Item>
-        <NavigationMenu.Item key="TRACES">
+        <NavigationMenu.Item key="ARTIFACT" active={viewMode === 'ARTIFACT'}>{evaluationTabLink}</NavigationMenu.Item>
+        <NavigationMenu.Item key="TRACES" active={viewMode === 'TRACES'}>
           <Link to={getLinkToMode('TRACES')}>
             <FormattedMessage
               defaultMessage="Traces"
@@ -108,7 +108,7 @@ export const ExperimentViewRunsModeSwitchV2 = ({ experimentId = '', activeTab }:
           </Link>
         </NavigationMenu.Item>
         {viewMode === 'INSIGHTS' && (
-          <NavigationMenu.Item key="INSIGHTS">
+          <NavigationMenu.Item key="INSIGHTS" active={viewMode === 'INSIGHTS'}>
             <Link to={getLinkToMode('INSIGHTS')}>
               <FormattedMessage
                 defaultMessage="Insights"

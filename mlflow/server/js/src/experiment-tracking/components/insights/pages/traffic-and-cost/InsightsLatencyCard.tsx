@@ -7,12 +7,13 @@
 import React, { useState } from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
 import { useTraceLatency, useLatencyCorrelations } from '../../hooks/useInsightsApi';
+import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
+import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
-import { TrendsLatencyPercentileSelector } from '../../components/TrendsLatencyPercentileSelector';
-import { PercentileThreshold } from '../../constants/percentileColors';
 import { TrendsCardSkeleton } from '../../components/TrendsSkeleton';
+import { PERCENTILE_COLORS } from '../../constants/percentileColors';
 
 interface InsightsLatencyCardProps {
   experimentId?: string;
@@ -20,13 +21,18 @@ interface InsightsLatencyCardProps {
 
 export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) => {
   const { theme } = useDesignSystemTheme();
-  const [selectedPercentile, setSelectedPercentile] = useState<PercentileThreshold>('P50');
+  
+  // Get chart time domain from global time range
+  const { xDomain } = useInsightsChartTimeRange();
+  
+  // Get automatic time bucket based on time range duration
+  const timeBucket = useTimeBucket();
   
   // Fetch latency data using React Query hook
   const { data: latencyData, isLoading, error } = useTraceLatency(
     {
       experiment_ids: experimentId ? [experimentId] : [],
-      time_bucket: 'hour',
+      time_bucket: timeBucket,
     },
     { refetchInterval: 30000 } // Auto-refresh every 30 seconds
   );
@@ -56,25 +62,24 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
     return null;
   }
 
-  // Transform time series data for chart based on selected percentile
-  const chartData = latencyData.time_series.map(point => {
-    let value = 0;
-    switch (selectedPercentile) {
-      case 'P50':
-        value = point.p50_latency || 0;
-        break;
-      case 'P90':
-        value = point.p90_latency || 0;
-        break;
-      case 'P99':
-        value = point.p99_latency || 0;
-        break;
-    }
-    return {
+  // Transform time series data for chart - show all three percentiles
+  const chartData = [
+    ...latencyData.time_series.map(point => ({
       timeBucket: new Date(point.time_bucket),
-      value,
-    };
-  });
+      value: point.p50_latency || 0,
+      seriesName: 'P50',
+    })),
+    ...latencyData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p90_latency || 0,
+      seriesName: 'P90',
+    })),
+    ...latencyData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p99_latency || 0,
+      seriesName: 'P99',
+    })),
+  ];
 
   // Transform correlations for display
   const correlations = correlationsData?.data.map(item => ({
@@ -95,17 +100,6 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
     <InsightsCard
       title="Latency Distribution"
       subtitle={`Median: ${formatLatency(latencyData.summary.p50_latency)}`}
-      headerContent={
-        <TrendsLatencyPercentileSelector
-          selectedPercentile={selectedPercentile}
-          onPercentileChange={setSelectedPercentile}
-          latencyData={{
-            p50: latencyData.summary.p50_latency || 0,
-            p90: latencyData.summary.p90_latency || 0,
-            p99: latencyData.summary.p99_latency || 0,
-          }}
-        />
-      }
     >
       {/* Summary Statistics */}
       <div
@@ -120,7 +114,7 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
         }}
       >
         <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.textValidationSuccess }}>
+          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P50 }}>
             {formatLatency(latencyData.summary.p50_latency)}
           </div>
           <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
@@ -129,7 +123,7 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
         </div>
         
         <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.yellow400 }}>
+          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P90 }}>
             {formatLatency(latencyData.summary.p90_latency)}
           </div>
           <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
@@ -138,7 +132,7 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
         </div>
         
         <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.textValidationDanger }}>
+          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P99 }}>
             {formatLatency(latencyData.summary.p99_latency)}
           </div>
           <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
@@ -179,8 +173,10 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
         <TrendsLineChart
           points={chartData}
           yAxisTitle="Latency (ms)"
-          title={`${selectedPercentile.toUpperCase()} Latency`}
+          title="Latency Percentiles Over Time"
           height={250}
+          xDomain={xDomain}
+          lineColors={[PERCENTILE_COLORS.P50, PERCENTILE_COLORS.P90, PERCENTILE_COLORS.P99]}
         />
       </div>
 
