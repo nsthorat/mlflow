@@ -1,4 +1,4 @@
-import { useDesignSystemTheme } from '@databricks/design-system';
+import { useDesignSystemTheme, Tabs } from '@databricks/design-system';
 
 import { useExperimentTraces } from './hooks/useExperimentTraces';
 import { TracesViewTable } from './TracesViewTable';
@@ -13,6 +13,8 @@ import { ExperimentViewTracesTableColumns, getTraceInfoTotalTokens } from './Tra
 import { useActiveExperimentTrace } from './hooks/useActiveExperimentTrace';
 import { useActiveExperimentSpan } from './hooks/useActiveExperimentSpan';
 import { ModelTraceInfo } from '@databricks/web-shared/model-trace-explorer';
+import { InsightsView } from '../insights';
+import { useSearchParams } from 'react-router-dom-v5-compat';
 
 export const TRACE_AUTO_REFRESH_INTERVAL = 30000;
 
@@ -42,6 +44,32 @@ export const TracesView = ({
   /**
    * The base component ID for the traces view. If not provided, will be inferred from the other props.
    */
+  baseComponentId?: string;
+}) => {
+  const { theme } = useDesignSystemTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const insightsSubpage = searchParams.get('insightsSubpage');
+  
+  // If an insights subpage is specified, show the insights view
+  if (insightsSubpage) {
+    return <InsightsView experimentId={experimentIds[0]} />;
+  }
+  
+  // Otherwise show the normal traces view with a tab to switch to insights
+  return <TracesViewWithInsightsTab {...{ experimentIds, runUuid, loggedModelId, disabledColumns, baseComponentId }} />;
+};
+
+const TracesViewWithInsightsTab = ({
+  experimentIds,
+  runUuid,
+  loggedModelId,
+  disabledColumns,
+  baseComponentId = runUuid ? 'mlflow.run.traces' : 'mlflow.experiment_page.traces',
+}: {
+  experimentIds: string[];
+  runUuid?: string;
+  loggedModelId?: string;
+  disabledColumns?: ExperimentViewTracesTableColumns[];
   baseComponentId?: string;
 }) => {
   const timeoutRef = useRef<number | undefined>(undefined);

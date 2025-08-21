@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { TracesViewControlsActions } from './TracesViewControlsActions';
 import { ModelTraceInfoWithRunName } from './hooks/useExperimentTraces';
+import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 
 const InputTooltip = ({ baseComponentId }: { baseComponentId: string }) => {
   const { theme } = useDesignSystemTheme();
@@ -78,6 +79,8 @@ export const TracesViewControls = ({
 }) => {
   const intl = useIntl();
   const { theme } = useDesignSystemTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Internal filter value state, used to control the input value
   const [filterValue, setFilterValue] = useState<string | undefined>(filter || undefined);
@@ -128,9 +131,23 @@ export const TracesViewControls = ({
   );
 
   return (
-    <div css={{ display: 'flex', gap: theme.spacing.xs }}>
+    <div css={{ display: 'flex', gap: theme.spacing.xs, justifyContent: 'space-between', width: '100%' }}>
       {/* Search and delete controls */}
-      {searchOrDeleteControls}
+      <div css={{ display: 'flex', gap: theme.spacing.xs }}>
+        {searchOrDeleteControls}
+      </div>
+      
+      {/* Insights button */}
+      <Button
+        componentId={`${baseComponentId}.traces_table.insights_button`}
+        onClick={() => {
+          const searchParams = new URLSearchParams(location.search);
+          searchParams.set('insightsSubpage', 'tools');
+          navigate(`${location.pathname}?${searchParams.toString()}`);
+        }}
+      >
+        View Insights
+      </Button>
     </div>
   );
 };
