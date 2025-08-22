@@ -8,6 +8,7 @@ import { getExperimentApi } from '../../actions';
 import { ExperimentKind, ExperimentPageTabName } from '../../constants';
 import { ExperimentViewHeaderCompare } from './components/header/ExperimentViewHeaderCompare';
 import { ExperimentViewRuns } from './components/runs/ExperimentViewRuns';
+import { ExperimentViewRunsModeSwitch } from './components/runs/ExperimentViewRunsModeSwitch';
 import { ExperimentViewRunsModeSwitchV2 } from './components/runs/ExperimentViewRunsModeSwitchV2';
 import { useExperiments } from './hooks/useExperiments';
 import { useFetchExperiments } from './hooks/useFetchExperiments';
@@ -269,6 +270,22 @@ export const ExperimentView = ({ showHeader = true }: { showHeader?: boolean }) 
   );
 
   const getRenderedView = () => {
+    // When using V1 header and in INSIGHTS mode, we need to show the mode switcher
+    if (viewMode === 'INSIGHTS' && !shouldEnableExperimentPageHeaderV2()) {
+      return (
+        <>
+          {/* Render the mode switcher for V1 header */}
+          {!isComparingExperiments && (
+            <ExperimentViewRunsModeSwitch
+              hideBorder={false}
+              runsAreGrouped={Boolean(uiState.groupBy)}
+            />
+          )}
+          <InsightsView experimentId={experimentIds[0]} />
+        </>
+      );
+    }
+    
     if (viewMode === 'TRACES') {
       return <ExperimentViewTraces experimentIds={experimentIds} />;
     }
