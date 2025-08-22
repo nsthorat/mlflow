@@ -22,6 +22,7 @@ class BaseRequest(BaseModel):
 class TimeSeriesRequest(BaseRequest):
     """Base request for endpoints that support time bucketing."""
     time_bucket: str = Field("hour", description="Time bucketing: hour, day, or week")
+    timezone: Optional[str] = Field(None, description="IANA timezone name (e.g., 'America/New_York')")
 
 
 # ============================================================================

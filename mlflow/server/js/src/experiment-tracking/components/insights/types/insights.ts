@@ -34,6 +34,7 @@ export interface VolumeRequest {
   start_time?: number | null;
   end_time?: number | null;
   time_bucket?: TimeBucket;
+  timezone?: string;
 }
 
 export interface VolumeResponse {

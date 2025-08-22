@@ -38,6 +38,10 @@ const getInsightsTimeRangeLabels = (intl: any) => ({
     defaultMessage: 'All time',
     description: 'Option for the time range dropdown to show all data',
   }),
+  CUSTOM: intl.formatMessage({
+    defaultMessage: 'Custom',
+    description: 'Option for the time range dropdown to show custom time range',
+  }),
 });
 
 export const InsightsTimeRangeSelector = React.memo(() => {

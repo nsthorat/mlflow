@@ -1,483 +1,65 @@
-2025/08/21 11:51:12 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:12 INFO mlflow.store.db.utils: Updating database tables
+2025/08/22 11:23:41 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/22 11:23:41 INFO mlflow.store.db.utils: Updating database tables
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-2025/08/21 11:51:12 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:12 INFO mlflow.store.db.utils: Updating database tables
+2025/08/22 11:23:41 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/22 11:23:41 INFO mlflow.store.db.utils: Updating database tables
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO:     Uvicorn running on http://127.0.0.1:5000 (Press CTRL+C to quit)
-INFO:     Started parent process [9774]
-INFO:     Started server process [9777]
+INFO:     Started parent process [84585]
+INFO:     Started server process [84591]
+INFO:     Started server process [84590]
+INFO:     Waiting for application startup.
+INFO:     Waiting for application startup.
+INFO:     Started server process [84589]
+INFO:     Application startup complete.
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Started server process [9776]
-INFO:     Waiting for application startup.
-INFO:     Started server process [9779]
 INFO:     Application startup complete.
+INFO:     Started server process [84592]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Started server process [9778]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     127.0.0.1:55185 - "GET /health HTTP/1.1" 200 OK
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Updating database tables
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Updating database tables
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Updating database tables
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Updating database tables
+INFO:     127.0.0.1:56959 - "GET /health HTTP/1.1" 200 OK
+2025/08/22 11:23:47 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/22 11:23:47 INFO mlflow.store.db.utils: Updating database tables
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO:     127.0.0.1:57035 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+2025/08/22 11:23:48 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/22 11:23:48 INFO mlflow.store.db.utils: Updating database tables
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO:     127.0.0.1:57055 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO:     127.0.0.1:57054 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57069 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57070 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57148 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57158 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57160 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
+2025/08/22 11:23:56 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/22 11:23:56 INFO mlflow.store.db.utils: Updating database tables
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
 INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
-2025/08/21 11:51:18 INFO mlflow.store.db.utils: Updating database tables
-INFO:     127.0.0.1:55223 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO:     127.0.0.1:55226 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55230 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55231 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO:     127.0.0.1:55227 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55248 - "GET /ajax-api/2.0/mlflow/experiments/search?max_results=25&order_by=last_update_time+DESC HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55288 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55296 - "POST /ajax-api/2.0/mlflow/traces/insights/tags/discovery HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55337 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55335 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55336 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55347 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55348 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55346 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55353 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55354 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55359 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55361 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55400 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55442 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55461 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55472 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55469 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55473 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55483 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55526 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55586 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55595 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55605 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55602 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55603 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55630 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55668 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55705 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55712 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55721 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55724 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55723 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55738 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55774 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55841 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55845 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55854 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55857 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55856 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55877 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55907 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55941 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55951 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55953 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55952 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55959 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55975 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56005 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56046 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56050 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56049 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56052 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56059 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56090 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56119 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56151 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56162 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56160 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56163 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56173 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56189 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56219 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56262 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56265 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56264 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56263 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56277 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56295 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56332 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56378 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56381 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56380 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56385 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56405 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56428 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56470 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56471 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56476 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56529 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56527 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56530 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56534 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56548 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56567 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56603 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56649 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56647 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56650 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56654 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56694 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56717 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56788 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56836 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56879 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56877 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56875 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56872 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56880 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56874 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56884 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56892 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56921 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56958 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56957 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56954 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56979 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56978 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56980 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56985 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56987 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56986 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56991 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56995 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57042 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57059 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57101 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57100 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57112 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57138 - "GET /ajax-api/2.0/mlflow/gateway-proxy?gateway_path=api%2F2.0%2Fendpoints%2F HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57136 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57135 - "POST /ajax-api/2.0/mlflow/logged-models/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57152 - "POST /ajax-api/2.0/mlflow/logged-models/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57150 - "POST /graphql HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57167 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57175 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57174 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57222 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57262 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57277 - "POST /ajax-api/2.0/mlflow/logged-models/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57286 - "GET /ajax-api/2.0/mlflow/gateway-proxy?gateway_path=api%2F2.0%2Fendpoints%2F HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57294 - "POST /ajax-api/2.0/mlflow/logged-models/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57298 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57297 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57314 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57320 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57313 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57318 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57317 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57379 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57443 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57444 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57442 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57449 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57448 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57450 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57458 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57456 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57480 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57479 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57525 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57566 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57581 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57592 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57591 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57594 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57641 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57642 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57677 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57725 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57728 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57769 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57809 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57819 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57827 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57832 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57831 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57912 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57953 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57958 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57991 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57992 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58013 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58055 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58066 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58105 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58102 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58106 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58158 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58199 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58203 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58260 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58300 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58304 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58337 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58339 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58340 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58398 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58434 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58439 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58491 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58536 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58532 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58640 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58674 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58678 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58744 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58795 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58799 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58840 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58839 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58838 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58848 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58847 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58877 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58874 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58875 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58880 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58881 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58924 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58922 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58923 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58929 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58928 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58930 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58936 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58938 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58976 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59054 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59053 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59052 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59062 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59060 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59096 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59141 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59240 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59290 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59294 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59306 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59347 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59393 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59491 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59490 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59489 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59495 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59516 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59512 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59517 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59511 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59519 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59515 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59523 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59566 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59564 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59565 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59570 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59571 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59572 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59578 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59580 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59655 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59699 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59780 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59782 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59792 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59808 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59822 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59821 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59824 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59890 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59930 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60009 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60011 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60022 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60033 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60041 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60049 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60048 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60122 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60204 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60294 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60298 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60308 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60314 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60326 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60323 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60325 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60425 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60461 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60466 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60463 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60470 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60484 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60579 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60683 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60726 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60728 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60759 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60855 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60949 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60993 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60990 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60992 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60988 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61024 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61058 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61057 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61056 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61131 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61268 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61329 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61347 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61351 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61422 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61516 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61564 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61589 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61590 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61661 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61750 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61797 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61827 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61829 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61894 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61977 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62022 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62041 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62043 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62107 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62205 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62246 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62265 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62267 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62332 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62438 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62495 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62513 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62515 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62599 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62700 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62751 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62769 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62771 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62853 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62956 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63007 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63035 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63037 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63116 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63228 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63279 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63297 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63299 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63385 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63475 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63515 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63531 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63535 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63598 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63695 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63738 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63757 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63759 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63840 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63951 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64005 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64024 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64026 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64114 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64225 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64278 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64298 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64300 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64373 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64482 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64539 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64558 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64560 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64643 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64750 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64792 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64811 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64813 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64905 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65006 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65058 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65077 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65079 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65221 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65328 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65374 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65394 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65395 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65479 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49199 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49249 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49271 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49273 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49368 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49464 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49480 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49526 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49550 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49552 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49627 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49714 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49755 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49774 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49775 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49865 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49975 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49995 - "POST /ajax-api/2.0/mlflow/experiments/search-datasets HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49994 - "GET /ajax-api/2.0/mlflow/experiments/get?experiment_id=1 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49993 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50001 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50000 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50002 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50008 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50010 - "POST /ajax-api/2.0/mlflow/traces/insights/correlations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50051 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50071 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50073 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50131 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50163 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50261 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50271 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50270 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50273 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50277 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50319 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50341 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50343 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50430 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57159 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57181 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57180 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57226 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57267 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57278 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57345 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57349 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57353 - "POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57389 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57403 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57402 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57413 - "POST /ajax-api/2.0/mlflow/runs/search HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57417 - "GET /ajax-api/2.0/mlflow/traces?experiment_ids=1&order_by=timestamp_ms%20DESC&filter= HTTP/1.1" 200 OK

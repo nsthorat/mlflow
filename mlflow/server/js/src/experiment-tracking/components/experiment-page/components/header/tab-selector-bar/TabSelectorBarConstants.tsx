@@ -22,7 +22,7 @@ export type TabConfig = {
 
 export type TabConfigMap = Partial<Record<ExperimentViewRunsCompareMode | ExperimentPageTabName, TabConfig>>;
 
-const RunsTabConfig = {
+export const RunsTabConfig = {
   label: (
     <FormattedMessage defaultMessage="Runs" description="Label for the runs tab in the MLflow experiment navbar" />
   ),
@@ -30,7 +30,7 @@ const RunsTabConfig = {
   getRoute: (experimentId: string) => Routes.getExperimentPageTabRoute(experimentId, ExperimentPageTabName.Runs),
 };
 
-const TracesTabConfig = {
+export const TracesTabConfig = {
   label: (
     <FormattedMessage defaultMessage="Traces" description="Label for the traces tab in the MLflow experiment navbar" />
   ),
@@ -38,7 +38,7 @@ const TracesTabConfig = {
   getRoute: (experimentId: string) => Routes.getExperimentPageTabRoute(experimentId, ExperimentPageTabName.Traces),
 };
 
-const ModelsTabConfig = {
+export const ModelsTabConfig = {
   label: (
     <FormattedMessage
       defaultMessage="Versions"

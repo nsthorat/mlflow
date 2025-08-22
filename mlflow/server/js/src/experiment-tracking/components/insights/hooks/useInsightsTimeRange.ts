@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from '../../../../common/utils/RoutingUtils';
 
 export const INSIGHTS_TIME_RANGE_QUERY_PARAM_KEY = 'insightsTimeRange';
-export const INSIGHTS_DATE_NOW_QUERY_PARAM_KEY = 'insightsDateNow';
 const INSIGHTS_START_TIME_QUERY_PARAM_KEY = 'insightsStartTime';
 const INSIGHTS_END_TIME_QUERY_PARAM_KEY = 'insightsEndTime';
 
@@ -31,13 +30,12 @@ export interface InsightsTimeRangeFilters {
  */
 export const useInsightsTimeRange = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Create dateNow once on mount and only update when explicitly refreshed
+  const [dateNow, setDateNow] = useState(() => new Date());
 
   const timeRange =
     (searchParams.get(INSIGHTS_TIME_RANGE_QUERY_PARAM_KEY) as InsightsTimeRange | undefined) || DEFAULT_INSIGHTS_TIME_RANGE;
-  
-  // Get or create pinned dateNow timestamp from URL
-  const dateNowParam = searchParams.get(INSIGHTS_DATE_NOW_QUERY_PARAM_KEY);
-  const dateNow = dateNowParam ? new Date(dateNowParam) : new Date();
 
   let startTime = searchParams.get(INSIGHTS_START_TIME_QUERY_PARAM_KEY) || undefined;
   let endTime = searchParams.get(INSIGHTS_END_TIME_QUERY_PARAM_KEY) ?? undefined;
@@ -58,7 +56,7 @@ export const useInsightsTimeRange = () => {
       startTime,
       endTime,
     }),
-    [timeRange, dateNow, startTime, endTime],
+    [timeRange, dateNow, startTime, endTime],  // Include dateNow in dependencies
   );
 
   const setTimeRangeFilters = useCallback(
@@ -80,14 +78,7 @@ export const useInsightsTimeRange = () => {
           } else {
             params.set(INSIGHTS_TIME_RANGE_QUERY_PARAM_KEY, filters.timeRange);
           }
-          if (filters?.dateNow === undefined) {
-            // Set dateNow if not already in URL (first time loading page)
-            if (!params.has(INSIGHTS_DATE_NOW_QUERY_PARAM_KEY)) {
-              params.set(INSIGHTS_DATE_NOW_QUERY_PARAM_KEY, new Date().toISOString());
-            }
-          } else {
-            params.set(INSIGHTS_DATE_NOW_QUERY_PARAM_KEY, filters.dateNow.toISOString());
-          }
+          // Don't store dateNow in URL - always use current time
           return params;
         },
         { replace },
@@ -96,17 +87,11 @@ export const useInsightsTimeRange = () => {
     [setSearchParams],
   );
 
-  // Initialize dateNow in URL if not present (first time loading insights)
-  useEffect(() => {
-    if (!searchParams.has(INSIGHTS_DATE_NOW_QUERY_PARAM_KEY)) {
-      setTimeRangeFilters({ dateNow: new Date() }, true);
-    }
-  }, []); // Only run once on mount
-
-  // Helper function to refresh dateNow (for refresh button)
+  // Helper function to refresh data (for refresh button)
   const refreshDateNow = useCallback(() => {
-    setTimeRangeFilters({ ...timeRangeFilters, dateNow: new Date() }, true);
-  }, [timeRangeFilters, setTimeRangeFilters]);
+    // Update dateNow to current time
+    setDateNow(new Date());
+  }, []);
 
   return [timeRangeFilters, setTimeRangeFilters, refreshDateNow] as const;
 };

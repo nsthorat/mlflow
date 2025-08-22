@@ -31,6 +31,18 @@ import { useInsightsTimeRange } from './useInsightsTimeRange';
 const INSIGHTS_API_BASE = '/ajax-api/2.0/mlflow/traces/insights';
 
 /**
+ * Get the user's timezone (IANA timezone name)
+ */
+function getUserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    // Fallback to UTC if timezone detection fails
+    return 'UTC';
+  }
+}
+
+/**
  * Generic POST request helper
  */
 async function postInsightsApi<TRequest, TResponse>(
@@ -61,7 +73,7 @@ async function postInsightsApi<TRequest, TResponse>(
  * Automatically includes time range parameters from URL state
  */
 export function useTraceVolume(
-  baseRequest: Omit<VolumeRequest, 'start_time' | 'end_time'>,
+  baseRequest: Omit<VolumeRequest, 'start_time' | 'end_time' | 'timezone'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<VolumeResponse> {
   const [timeRangeFilters] = useInsightsTimeRange();
@@ -70,6 +82,7 @@ export function useTraceVolume(
     ...baseRequest,
     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+    timezone: getUserTimezone(),
   };
 
   return useQuery({
@@ -86,7 +99,7 @@ export function useTraceVolume(
  * Automatically includes time range parameters from URL state
  */
 export function useTraceLatency(
-  baseRequest: Omit<LatencyRequest, 'start_time' | 'end_time'>,
+  baseRequest: Omit<LatencyRequest, 'start_time' | 'end_time' | 'timezone'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<LatencyResponse> {
   const [timeRangeFilters] = useInsightsTimeRange();
@@ -95,6 +108,7 @@ export function useTraceLatency(
     ...baseRequest,
     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+    timezone: getUserTimezone(),
   };
 
   return useQuery({
@@ -111,7 +125,7 @@ export function useTraceLatency(
  * Automatically includes time range parameters from URL state
  */
 export function useTraceErrors(
-  baseRequest: Omit<ErrorRequest, 'start_time' | 'end_time'>,
+  baseRequest: Omit<ErrorRequest, 'start_time' | 'end_time' | 'timezone'>,
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<ErrorResponse> {
   const [timeRangeFilters] = useInsightsTimeRange();
@@ -120,6 +134,7 @@ export function useTraceErrors(
     ...baseRequest,
     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+    timezone: getUserTimezone(),
   };
 
   return useQuery({

@@ -14,6 +14,7 @@ import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
 import { TrendsCardSkeleton } from '../../components/TrendsSkeleton';
 import { PERCENTILE_COLORS } from '../../constants/percentileColors';
+import { NoDataFoundMessage } from '../../components/NoDataFoundMessage';
 
 interface InsightsLatencyCardProps {
   experimentId?: string;
@@ -62,6 +63,9 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
     return null;
   }
 
+  // Check if there's no data (check if we have any latency values)
+  const hasData = latencyData.summary.p50_latency !== null;
+
   // Transform time series data for chart - show all three percentiles
   const chartData = [
     ...latencyData.time_series.map(point => ({
@@ -99,10 +103,12 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
   return (
     <InsightsCard
       title="Latency Distribution"
-      subtitle={`Median: ${formatLatency(latencyData.summary.p50_latency)}`}
+      subtitle={hasData ? `Median: ${formatLatency(latencyData.summary.p50_latency)}` : undefined}
     >
-      {/* Summary Statistics */}
-      <div
+      {hasData ? (
+        <>
+          {/* Summary Statistics */}
+          <div
         css={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -200,6 +206,10 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
             }}
           />
         </div>
+      )}
+        </>
+      ) : (
+        <NoDataFoundMessage />
       )}
     </InsightsCard>
   );

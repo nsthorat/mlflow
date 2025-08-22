@@ -18,6 +18,9 @@ import {
   CustomExperimentTabConfigMap,
   DefaultTabConfigMap,
   InsightsTabConfig,
+  RunsTabConfig,
+  TracesTabConfig,
+  ModelsTabConfig,
 } from './TabSelectorBarConstants';
 import { FormattedMessage } from 'react-intl';
 import { useGetExperimentPageActiveTabByRoute } from '../../../hooks/useGetExperimentPageActiveTabByRoute';
@@ -27,6 +30,17 @@ const iTracesViewTab = (tabName: string) => ['TRACES'].includes(tabName);
 const isInsightsViewTab = (tabName: string) => ['INSIGHTS'].includes(tabName);
 
 const getExperimentTabsConfig = (experimentKind?: ExperimentKind, viewMode?: string): TabConfigMap => {
+  // When in INSIGHTS mode, show ALL tabs plus the Insights tab
+  if (viewMode === 'INSIGHTS') {
+    return {
+      [ExperimentPageTabName.Runs]: RunsTabConfig,
+      [ExperimentPageTabName.Traces]: TracesTabConfig,
+      [ExperimentPageTabName.Models]: ModelsTabConfig,
+      INSIGHTS: InsightsTabConfig,
+    };
+  }
+  
+  // Otherwise, use the normal experiment-type-based config
   let baseConfig: TabConfigMap;
   
   switch (experimentKind) {
@@ -46,14 +60,6 @@ const getExperimentTabsConfig = (experimentKind?: ExperimentKind, viewMode?: str
       break;
     default:
       baseConfig = DefaultTabConfigMap;
-  }
-  
-  // When in INSIGHTS mode, add the Insights tab to the config
-  if (viewMode === 'INSIGHTS') {
-    return {
-      ...baseConfig,
-      INSIGHTS: InsightsTabConfig,
-    };
   }
   
   return baseConfig;

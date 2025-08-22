@@ -8,11 +8,13 @@ The bucketing logic rounds timestamps to the nearest boundary (hour/day/week).
 from sqlalchemy import cast, Integer
 from sqlalchemy.sql import ColumnElement
 from mlflow.store.tracking.dbmodels.models import SqlTraceInfo
-from typing import Literal
+from typing import Literal, Optional
+from datetime import datetime
+import pytz
 
 TimeBucketType = Literal['hour', 'day', 'week']
 
-def get_time_bucket_expression(time_bucket: TimeBucketType) -> ColumnElement:
+def get_time_bucket_expression(time_bucket: TimeBucketType, timezone: Optional[str] = None) -> ColumnElement:
     """
     Create SQLAlchemy expression for time bucketing.
     
@@ -21,6 +23,7 @@ def get_time_bucket_expression(time_bucket: TimeBucketType) -> ColumnElement:
     
     Args:
         time_bucket: Bucket size - 'hour', 'day', or 'week'
+        timezone: IANA timezone name (e.g., 'America/New_York') for timezone-aware bucketing
         
     Returns:
         SQLAlchemy expression that groups timestamps into buckets
@@ -31,24 +34,44 @@ def get_time_bucket_expression(time_bucket: TimeBucketType) -> ColumnElement:
         For week bucketing: rounds to nearest Monday 00:00:00
     """
     
+    # Calculate timezone offset in milliseconds if timezone is provided
+    offset_ms = 0
+    if timezone and time_bucket in ["day", "week"]:
+        try:
+            tz = pytz.timezone(timezone)
+            # Get current UTC offset for this timezone
+            # We use a reference time to get the offset
+            now = datetime.now(pytz.UTC)
+            localized = now.astimezone(tz)
+            # Get offset in seconds and convert to milliseconds
+            offset_ms = int(localized.utcoffset().total_seconds() * 1000)
+        except:
+            # If timezone is invalid, fall back to UTC
+            offset_ms = 0
+    
     if time_bucket == "hour":
         # Round to nearest hour using integer division: (timestamp_ms / 3600000) * 3600000
+        # Hours don't need timezone adjustment as they're the same in all timezones
         return cast(
             cast(SqlTraceInfo.timestamp_ms / 3600000, Integer) * 3600000,
             Integer
         ).label('time_bucket')
         
     elif time_bucket == "day":
-        # Round to nearest day using integer division: (timestamp_ms / 86400000) * 86400000
+        # For timezone-aware day bucketing, adjust timestamp before bucketing
+        # This ensures days align with local midnight instead of UTC midnight
+        adjusted_timestamp = SqlTraceInfo.timestamp_ms + offset_ms
         return cast(
-            cast(SqlTraceInfo.timestamp_ms / 86400000, Integer) * 86400000,
+            cast(adjusted_timestamp / 86400000, Integer) * 86400000 - offset_ms,
             Integer
         ).label('time_bucket')
         
     elif time_bucket == "week":
-        # Round to nearest week using integer division: (timestamp_ms / 604800000) * 604800000
+        # For timezone-aware week bucketing, adjust timestamp before bucketing
+        # This ensures weeks align with local Monday midnight instead of UTC Monday
+        adjusted_timestamp = SqlTraceInfo.timestamp_ms + offset_ms
         return cast(
-            cast(SqlTraceInfo.timestamp_ms / 604800000, Integer) * 604800000,
+            cast(adjusted_timestamp / 604800000, Integer) * 604800000 - offset_ms,
             Integer
         ).label('time_bucket')
         

@@ -1,6 +1,6 @@
 /**
  * MLflow Trace Insights - Main View Component
- * 
+ *
  * Main entry point for insights feature with left sidebar navigation.
  * Matches reference implementation structure.
  */
@@ -36,55 +36,32 @@ const navigationItems: NavigationItem[] = [
   { id: 'create', label: 'Create View', icon: '➕', implemented: false },
 ];
 
-const InsightsViewImpl: React.FC<InsightsViewProps> = ({
-  experimentId,
-  subpage
-}) => {
+const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }) => {
   const { theme } = useDesignSystemTheme();
   const [activePage, setActivePage] = useInsightsPageMode();
 
   const renderActivePage = () => {
     switch (activePage) {
       case 'traffic':
-        return (
-          <InsightsPageTrafficAndCost
-            experimentId={experimentId}
-          />
-        );
+        return <InsightsPageTrafficAndCost experimentId={experimentId} />;
       case 'quality':
-        return (
-          <InsightsPageQualityMetrics
-            experimentId={experimentId}
-          />
-        );
+        return <InsightsPageQualityMetrics experimentId={experimentId} />;
       case 'tools':
-        return (
-          <InsightsPageTools
-            experimentId={experimentId}
-          />
-        );
+        return <InsightsPageTools experimentId={experimentId} />;
       case 'tags':
-        return (
-          <InsightsPageTags
-            experimentId={experimentId}
-          />
-        );
+        return <InsightsPageTags experimentId={experimentId} />;
       case 'topics':
         return (
           <div style={{ padding: theme.spacing.lg }}>
             <h2>Topics</h2>
-            <p style={{ color: theme.colors.textSecondary }}>
-              Topic clustering and analysis placeholder...
-            </p>
+            <p style={{ color: theme.colors.textSecondary }}>Topic clustering and analysis placeholder...</p>
           </div>
         );
       case 'create':
         return (
           <div style={{ padding: theme.spacing.lg }}>
             <h2>Create View</h2>
-            <p style={{ color: theme.colors.textSecondary }}>
-              Custom view creation placeholder...
-            </p>
+            <p style={{ color: theme.colors.textSecondary }}>Custom view creation placeholder...</p>
           </div>
         );
       default:
@@ -99,6 +76,7 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
         background: theme.colors.backgroundPrimary,
       }}
     >
@@ -117,7 +95,7 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({
         {/* Left Sidebar Navigation */}
         <div
           css={{
-            width: '240px',
+            width: '200px',
             borderRight: `1px solid ${theme.colors.border}`,
             background: theme.colors.backgroundSecondary,
             display: 'flex',
@@ -134,13 +112,12 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({
                   width: '100%',
                   padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
                   border: 'none',
-                  background: activePage === item.id 
-                    ? theme.colors.actionDefaultBackgroundPress 
-                    : 'transparent',
-                  color: activePage === item.id 
-                    ? theme.colors.textPrimary 
-                    : item.implemented 
-                      ? theme.colors.textSecondary 
+                  background: activePage === item.id ? theme.colors.actionDefaultBackgroundPress : 'transparent',
+                  color:
+                    activePage === item.id
+                      ? theme.colors.textPrimary
+                      : item.implemented
+                      ? theme.colors.textSecondary
                       : theme.colors.textPlaceholder,
                   borderRadius: theme.general.borderRadiusBase,
                   cursor: item.implemented ? 'pointer' : 'not-allowed',
@@ -152,11 +129,11 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({
                   gap: theme.spacing.xs,
                   marginBottom: theme.spacing.xs,
                   transition: 'all 0.2s ease',
-                  '&:hover': item.implemented ? {
-                    background: activePage !== item.id 
-                      ? theme.colors.actionDefaultBackgroundHover 
-                      : undefined,
-                  } : {},
+                  '&:hover': item.implemented
+                    ? {
+                        background: activePage !== item.id ? theme.colors.actionDefaultBackgroundHover : undefined,
+                      }
+                    : {},
                 }}
                 onClick={() => item.implemented && setActivePage(item.id)}
                 disabled={!item.implemented}

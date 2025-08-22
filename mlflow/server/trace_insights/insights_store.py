@@ -89,7 +89,7 @@ class InsightsStore:
             
             # Build time bucket expression using shared utility
             validated_bucket = validate_time_bucket(request.time_bucket or 'hour')
-            time_bucket_expr = get_time_bucket_expression(validated_bucket)
+            time_bucket_expr = get_time_bucket_expression(validated_bucket, timezone=request.timezone)
             
             # Get time series data
             time_series_query = base_query.with_entities(
@@ -170,35 +170,38 @@ class InsightsStore:
                 'max_latency': max(exec_times_list) if exec_times_list else None
             }
             
-            # Build time bucket expression for SQLite
-            if request.time_bucket == "hour":
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 3600000) * 3600000,
-                    Integer
-                )
-            elif request.time_bucket == "day":
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 86400000) * 86400000,
-                    Integer
-                )
-            else:
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 604800000) * 604800000,
-                    Integer
-                )
+            # Build time bucket expression using shared utility
+            validated_bucket = validate_time_bucket(request.time_bucket or 'hour')
+            time_bucket_expr = get_time_bucket_expression(validated_bucket, timezone=request.timezone)
             
             # Get time series data - group execution times by bucket
             time_series_data = []
             time_bucket_groups = {}
             
-            # Group execution times by time bucket
+            # Group execution times by time bucket with timezone awareness
+            import pytz
+            from datetime import datetime
+            
+            # Calculate timezone offset if provided
+            offset_ms = 0
+            if request.timezone and request.time_bucket in ["day", "week"]:
+                try:
+                    tz = pytz.timezone(request.timezone)
+                    now = datetime.now(pytz.UTC)
+                    localized = now.astimezone(tz)
+                    offset_ms = int(localized.utcoffset().total_seconds() * 1000)
+                except:
+                    offset_ms = 0
+            
             for trace in base_query.all():
                 if request.time_bucket == "hour":
                     bucket = int((trace.timestamp_ms / 3600000) * 3600000)
                 elif request.time_bucket == "day":
-                    bucket = int((trace.timestamp_ms / 86400000) * 86400000)
-                else:
-                    bucket = int((trace.timestamp_ms / 604800000) * 604800000)
+                    adjusted_ts = trace.timestamp_ms + offset_ms
+                    bucket = int((adjusted_ts / 86400000) * 86400000 - offset_ms)
+                else:  # week
+                    adjusted_ts = trace.timestamp_ms + offset_ms
+                    bucket = int((adjusted_ts / 604800000) * 604800000 - offset_ms)
                 
                 if bucket not in time_bucket_groups:
                     time_bucket_groups[bucket] = []
@@ -274,22 +277,9 @@ class InsightsStore:
             errors = summary_query.error_count or 0
             error_rate = (errors / total * 100) if total > 0 else 0
             
-            # Build time bucket expression for SQLite
-            if request.time_bucket == "hour":
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 3600000) * 3600000,
-                    Integer
-                )
-            elif request.time_bucket == "day":
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 86400000) * 86400000,
-                    Integer
-                )
-            else:
-                time_bucket_expr = cast(
-                    (SqlTraceInfo.timestamp_ms / 604800000) * 604800000,
-                    Integer
-                )
+            # Build time bucket expression using shared utility
+            validated_bucket = validate_time_bucket(request.time_bucket or 'hour')
+            time_bucket_expr = get_time_bucket_expression(validated_bucket, timezone=request.timezone)
             
             # Get time series data
             error_count_expr = func.sum(case((SqlTraceInfo.status == 'ERROR', 1), else_=0))

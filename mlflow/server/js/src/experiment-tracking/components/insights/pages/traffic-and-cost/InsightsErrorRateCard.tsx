@@ -13,6 +13,7 @@ import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
 import { TrendsCardSkeleton } from '../../components/TrendsSkeleton';
+import { NoDataFoundMessage } from '../../components/NoDataFoundMessage';
 
 interface InsightsErrorRateCardProps {
   experimentId?: string;
@@ -60,6 +61,9 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
     return null;
   }
 
+  // Check if there's no data
+  const hasData = errorData.summary.total_count > 0;
+
   // Transform time series data for chart
   // Backend already provides error_rate as percentage (0-100), so divide by 100 for decimal format
   const chartData = errorData.time_series.map(point => ({
@@ -85,10 +89,12 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
   return (
     <InsightsCard
       title="Error Rate"
-      subtitle={`${errorData.summary.error_count} errors out of ${errorData.summary.total_count} traces`}
+      subtitle={hasData ? `${errorData.summary.error_count} errors out of ${errorData.summary.total_count} traces` : undefined}
     >
-      {/* Summary Statistics */}
-      <div
+      {hasData ? (
+        <>
+          {/* Summary Statistics */}
+          <div
         css={{
           display: 'flex',
           gap: theme.spacing.lg,
@@ -173,6 +179,10 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
             Higher NPMI scores indicate stronger correlation with errors.
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        <NoDataFoundMessage />
       )}
     </InsightsCard>
   );
