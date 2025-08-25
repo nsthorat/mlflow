@@ -28,6 +28,7 @@ export interface TrendsLineChartProps {
   yDomain?: [number | undefined, number | undefined];
   leftMargin?: number;
   yAxisOptions?: Partial<Layout['yaxis']>; // Additional y-axis configuration
+  connectGaps?: boolean; // Whether to connect lines across missing data points
 }
 
 export const TrendsLineChart = ({
@@ -43,6 +44,7 @@ export const TrendsLineChart = ({
   yDomain,
   leftMargin = 60,
   yAxisOptions,
+  connectGaps = false,
 }: TrendsLineChartProps) => {
   const { theme } = useDesignSystemTheme();
 
@@ -85,7 +87,7 @@ export const TrendsLineChart = ({
       x: seriesPoints.map(p => p.timeBucket),
       y: seriesPoints.map(p => p.value),
       name: seriesName === 'default' ? '' : seriesName,
-      connectgaps: false, // Don't connect lines across missing data points
+      connectgaps: connectGaps, // Configurable line connection across missing data points
       line: {
         color: lineColors[index] || lineColors[0] || '#1f77b4',
         width: 2,

@@ -517,6 +517,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
               height={200}
               yAxisOptions={{ dtick: 1 }}
               xDomain={xDomain}
+              connectGaps={true}
             />
           );
         })() : (
@@ -608,6 +609,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
             yAxisOptions={{ rangemode: 'tozero' }}
             xDomain={xDomain}
             showLegend={false}
+            connectGaps={false}
           />
         ) : (
           <div css={{ 
@@ -669,6 +671,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
                 lineColors={[theme.colors.textValidationDanger]}
                 height={150}
                 xDomain={xDomain}
+                connectGaps={false}
               />
             )}
             
