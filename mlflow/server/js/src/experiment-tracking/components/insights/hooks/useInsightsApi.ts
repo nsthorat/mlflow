@@ -78,11 +78,12 @@ export function useTraceVolume(
 ): UseQueryResult<VolumeResponse> {
   const [timeRangeFilters] = useInsightsTimeRange();
   
+  const timezone = getUserTimezone();
   const request: VolumeRequest = {
     ...baseRequest,
     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
-    timezone: getUserTimezone(),
+    timezone: timezone,
   };
 
   return useQuery({
@@ -157,9 +158,36 @@ export function useAssessmentDiscovery(
   experimentIds: string[],
   options?: { refetchInterval?: number }
 ): UseQueryResult<{ assessments: Array<{ name: string; data_type: 'boolean' | 'numeric' | 'string'; source: string; count: number }> }> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
   return useQuery({
-    queryKey: ['trace-insights', 'assessments', 'discovery', experimentIds],
-    queryFn: () => postInsightsApi('/quality/assessments/discovery', { experiment_ids: experimentIds }),
+    queryKey: ['trace-insights', 'assessments', 'discovery', experimentIds, timeRangeFilters.startTime, timeRangeFilters.endTime],
+    queryFn: async () => {
+      console.log('Assessment discovery API call with experiment_ids:', experimentIds);
+      const requestData = {
+        experiment_ids: experimentIds,
+        start_time: timeRangeFilters.startTime,
+        end_time: timeRangeFilters.endTime
+      };
+      console.log('Assessment discovery request data:', requestData);
+      
+      const response: any = await postInsightsApi('/quality/assessments/discovery', requestData);
+      console.log('Assessment discovery API response:', response);
+      
+      // Transform API response from {data: [...]} to {assessments: [...]} format
+      // and map field names from API response to expected UI format
+      const transformedData = {
+        assessments: response.data.map((item: any) => ({
+          name: item.assessment_name,
+          data_type: item.assessment_type, // Now properly returns 'boolean', 'pass_fail', 'numeric', or 'string'
+          source: Array.isArray(item.sources) ? item.sources.join(', ') : item.sources || 'Unknown',
+          count: item.trace_count
+        }))
+      };
+      
+      console.log('Transformed assessment data:', transformedData);
+      return transformedData;
+    },
     enabled: experimentIds.length > 0,
     refetchInterval: options?.refetchInterval,
     staleTime: 60000, // 1 minute
@@ -188,7 +216,8 @@ export function useAssessmentMetrics(
 export function useAssessmentData(
   assessmentName: string,
   experimentIds: string[],
-  options?: { refetchInterval?: number }
+  options?: { refetchInterval?: number },
+  timeBucket: 'hour' | 'day' | 'week' = 'hour'
 ): UseQueryResult<{
   summary: { 
     total_count?: number; 
@@ -207,11 +236,11 @@ export function useAssessmentData(
   }>;
 }> {
   return useQuery({
-    queryKey: ['trace-insights', 'assessments', 'data', assessmentName, experimentIds],
+    queryKey: ['trace-insights', 'assessments', 'data', assessmentName, experimentIds, timeBucket],
     queryFn: () => postInsightsApi('/assessments/data', { 
       assessment_name: assessmentName,
       experiment_ids: experimentIds,
-      time_bucket: 'hour',
+      time_bucket: timeBucket,
     }),
     enabled: experimentIds.length > 0 && !!assessmentName,
     refetchInterval: options?.refetchInterval,
@@ -251,20 +280,30 @@ export function useToolDiscovery(
  * Hook for fetching detailed tool metrics
  */
 export function useToolMetrics(
-  request: { tool_name: string; experiment_ids: string[]; time_bucket?: string },
+  request: { tool_name?: string; experiment_ids: string[]; time_bucket?: string },
   options?: { enabled?: boolean; refetchInterval?: number }
-): UseQueryResult<{ time_series: Array<{ 
-  time_bucket: string; 
-  count: number; 
-  error_count: number; 
-  p50_latency?: number;
-  p90_latency?: number;
-  p99_latency?: number;
-}> }> {
+): UseQueryResult<{ 
+  data?: {
+    p50_latency?: number;
+    p90_latency?: number; 
+    p99_latency?: number;
+    invocation_count?: number;
+    error_count?: number;
+    error_rate?: number;
+  };
+  time_series: Array<{ 
+    time_bucket: string; 
+    count: number; 
+    error_count: number; 
+    p50_latency?: number;
+    p90_latency?: number;
+    p99_latency?: number;
+  }> 
+}> {
   return useQuery({
     queryKey: ['trace-insights', 'tools', 'metrics', request],
     queryFn: () => postInsightsApi('/tools/metrics', request),
-    enabled: options?.enabled !== false && request.experiment_ids.length > 0 && !!request.tool_name,
+    enabled: options?.enabled !== false && request.experiment_ids.length > 0,
     refetchInterval: options?.refetchInterval,
     staleTime: 30000,
   });

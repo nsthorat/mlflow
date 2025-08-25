@@ -228,7 +228,7 @@ class ToolDiscoveryResponse(BaseModel):
 
 class ToolMetricsRequest(TimeSeriesRequest):
     """Request for tool metrics."""
-    tool_name: str = Field(description="Name of the tool to analyze")
+    tool_name: Optional[str] = Field(default=None, description="Name of the tool to analyze. If None, returns overall metrics across all tools.")
 
 
 class ToolMetricsResponse(BaseModel):

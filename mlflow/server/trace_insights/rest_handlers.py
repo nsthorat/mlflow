@@ -4,6 +4,7 @@ REST API handlers that use the centralized InsightsStore for all computations.
 These handlers follow the REST API specification in insights_rest_api.md.
 """
 
+from datetime import datetime
 from flask import jsonify, request
 from mlflow.server.handlers import (
     _get_tracking_store,
@@ -25,6 +26,28 @@ from mlflow.server.trace_insights.models import (
     # Correlation models
     CorrelationsRequest
 )
+
+
+def _convert_iso_to_ms(iso_timestamp):
+    """Convert ISO timestamp string to milliseconds since epoch.
+    
+    Args:
+        iso_timestamp: ISO timestamp string (e.g., '2024-08-25T15:30:00.000Z') or None
+        
+    Returns:
+        int: Milliseconds since epoch, or None if input is None
+    """
+    if iso_timestamp is None:
+        return None
+    if isinstance(iso_timestamp, int):
+        return iso_timestamp  # Already in milliseconds
+    try:
+        # Parse ISO timestamp and convert to milliseconds
+        dt = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
+        return int(dt.timestamp() * 1000)
+    except (ValueError, AttributeError):
+        # If parsing fails, assume it's already an integer or return None
+        return None
 
 
 # ============================================================================
@@ -128,11 +151,11 @@ def assessment_discovery_handler():
     """
     data = request.get_json() or {}
     
-    # Create request object
+    # Create request object with timestamp conversion
     req = AssessmentDiscoveryRequest(
         experiment_ids=data.get('experiment_ids', []),
-        start_time=data.get('start_time'),
-        end_time=data.get('end_time')
+        start_time=_convert_iso_to_ms(data.get('start_time')),
+        end_time=_convert_iso_to_ms(data.get('end_time'))
     )
     
     # Validate required fields
@@ -233,9 +256,14 @@ def tool_discovery_handler():
 def tool_metrics_handler():
     """
     Handler for `POST /api/3.0/mlflow/traces/insights/tools/metrics`
-    Returns detailed metrics for a specific tool.
+    Returns detailed metrics for a specific tool OR overall metrics across all tools.
     """
     data = request.get_json() or {}
+    
+    # Get tool_name and normalize empty string to None
+    tool_name = data.get('tool_name')
+    if tool_name == '':
+        tool_name = None
     
     # Create request object
     req = ToolMetricsRequest(
@@ -243,18 +271,22 @@ def tool_metrics_handler():
         start_time=data.get('start_time'),
         end_time=data.get('end_time'),
         time_bucket=data.get('time_bucket', 'hour'),
-        tool_name=data.get('tool_name', '')
+        tool_name=tool_name
     )
     
     # Validate required fields
     if not req.experiment_ids:
         return jsonify({"error": "experiment_ids is required"}), 400
-    if not req.tool_name:
-        return jsonify({"error": "tool_name is required"}), 400
     
     # Get insights store and compute response
     store = InsightsStore(_get_tracking_store())
-    response = store.get_tool_metrics(req)
+    
+    if req.tool_name:
+        # Specific tool metrics
+        response = store.get_tool_metrics(req)
+    else:
+        # Overall metrics across all tools
+        response = store.get_overall_tool_metrics(req)
     
     # Transform response to match UI expectations
     response_dict = response.model_dump()

@@ -123,4 +123,4 @@ a.md
 gunicorn.conf.py
 
 # Ignore claude file
-CLAUDE.md
+.claude/

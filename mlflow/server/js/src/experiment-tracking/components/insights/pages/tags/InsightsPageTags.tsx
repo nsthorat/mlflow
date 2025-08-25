@@ -167,25 +167,6 @@ const TagCard: React.FC<TagCardProps> = ({ tag, experimentId }) => {
     <InsightsCard
       title={tag.key}
       subtitle={`${tag.trace_count.toLocaleString()} usage(s) across ${tag.unique_values_count.toLocaleString()} value(s)`}
-      headerContent={
-        <button
-          css={{
-            padding: `${theme.spacing.xs}px ${theme.spacing.sm}px`,
-            background: theme.colors.actionDefaultBackgroundDefault,
-            color: theme.colors.actionDefaultTextDefault,
-            border: 'none',
-            borderRadius: theme.general.borderRadiusBase,
-            fontSize: theme.typography.fontSizeSm,
-            cursor: 'pointer',
-            '&:hover': {
-              background: theme.colors.actionDefaultBackgroundHover,
-            },
-          }}
-          onClick={() => console.log('View traces for tag:', tag.key)}
-        >
-          View Traces
-        </button>
-      }
     >
       {/* Value Distribution Chart */}
       {valuesData && valuesData.values.length > 0 && (

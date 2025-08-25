@@ -1,6 +1,6 @@
 import { useSearchParams } from '../../../../common/utils/RoutingUtils';
 
-export type InsightsPageMode = 'traffic' | 'quality' | 'tools' | 'tags' | 'topics' | 'create';
+export type InsightsPageMode = 'traffic' | 'quality' | 'tools' | 'tags' | 'create';
 
 export const INSIGHTS_SUBPAGE_QUERY_PARAM_KEY = 'insightsSubpage';
 

@@ -8,6 +8,7 @@ import { LazyPlot } from '../../LazyPlot';
 import { TimeBucket } from '../types/insightsTypes';
 import { createThemedPlotlyLayout } from '../../runs-charts/components/RunsCharts.common';
 import { CHART_CONFIG } from '../constants/chartConfig';
+import { getPlotlyTickConfig, getPlotlyTickConfigForRange, formatTooltipDate } from '../utils/chartDateFormatting';
 
 export interface TrendsBarChartBar {
   timeBucket: Date;
@@ -22,6 +23,7 @@ export const TrendsBarChart = ({
   yAxisTitle,
   yAxisFormat,
   points,
+  timeBucket = 'hour',
   barColor,
   aggregationType,
   isLoading,
@@ -43,7 +45,20 @@ export const TrendsBarChart = ({
 }) => {
   const { theme } = useDesignSystemTheme();
 
-  // Create Plotly data
+  // Get smart tick configuration for x-axis
+  const tickConfig = React.useMemo(() => {
+    if (points.length === 0) return { ticktext: [], tickvals: [], tickangle: 0 };
+    
+    // For day/week buckets with xDomain, generate ticks for the full range
+    if (xDomain && xDomain[0] && xDomain[1] && (timeBucket === 'day' || timeBucket === 'week')) {
+      return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    }
+    
+    // Otherwise use the data points
+    return getPlotlyTickConfig(points, timeBucket);
+  }, [points, timeBucket, xDomain]);
+
+  // Create Plotly data with smart tooltips
   const plotlyData: Data[] = [
     {
       type: 'bar',
@@ -52,20 +67,26 @@ export const TrendsBarChart = ({
       marker: {
         color: barColor || CHART_CONFIG.COLORS.TRAFFIC,
       },
-      hovertemplate: `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: %{x}<extra></extra>`,
+      hovertemplate: points.map(p => 
+        `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: ${formatTooltipDate(p.timeBucket, timeBucket)}<extra></extra>`
+      )[0], // Use first point's format as template
     }
   ];
 
-  // Create Plotly layout
+  // Create Plotly layout with smart date formatting
   const layout: Partial<Layout> = {
     ...createThemedPlotlyLayout(theme),
     height,
-    margin: { l: 60, r: 20, t: 20, b: 60 },
+    margin: { l: 60, r: 20, t: 20, b: tickConfig.tickangle !== 0 ? 80 : 60 },
     xaxis: {
       title: '',
       gridcolor: theme.colors.borderDecorative,
       tickcolor: theme.colors.textPlaceholder,
       range: xDomain,
+      tickmode: 'array',
+      ticktext: tickConfig.ticktext,
+      tickvals: tickConfig.tickvals,
+      tickangle: tickConfig.tickangle,
     },
     yaxis: {
       title: yAxisTitle,
@@ -81,6 +102,7 @@ export const TrendsBarChart = ({
   const config: Partial<Config> = {
     displayModeBar: false,
     responsive: true,
+    autosizable: true,
   };
 
   return (
@@ -131,11 +153,15 @@ export const TrendsBarChart = ({
             description="Description for when there is no data to show."
           />
         ) : (
-          <LazyPlot
-            data={plotlyData}
-            layout={layout}
-            config={config}
-          />
+          <div css={{ width: '100%', position: 'relative' }}>
+            <LazyPlot
+              data={plotlyData}
+              layout={layout}
+              config={config}
+              style={{ width: '100%' }}
+              useResizeHandler={true}
+            />
+          </div>
         )}
       </div>
     </div>

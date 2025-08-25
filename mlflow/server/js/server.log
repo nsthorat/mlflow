@@ -1,0 +1,23 @@
+2025/08/25 11:55:15 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/25 11:55:15 INFO mlflow.store.db.utils: Updating database tables
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+2025/08/25 11:55:15 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/08/25 11:55:15 INFO mlflow.store.db.utils: Updating database tables
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO:     Will watch for changes in these directories: ['/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js']
+WARNING:  "workers" flag is ignored when reloading is enabled.
+INFO:     Uvicorn running on http://127.0.0.1:5000 (Press CTRL+C to quit)
+INFO:     Started reloader process [10524] using WatchFiles
+INFO:     Started server process [10526]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:50161 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10526]
+INFO:     Stopping reloader process [10524]

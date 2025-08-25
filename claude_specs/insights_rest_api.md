@@ -446,9 +446,9 @@ All endpoints return both summary totals and time-series data:
 
 **Endpoint**: `POST /api/3.0/mlflow/traces/insights/tools/metrics`
 
-**Purpose**: Returns detailed metrics for a specific tool
+**Purpose**: Returns detailed metrics for a specific tool OR overall metrics across all tools
 
-**Request**:
+**Request for specific tool**:
 ```json
 {
     "experiment_ids": ["123"],
@@ -459,7 +459,17 @@ All endpoints return both summary totals and time-series data:
 }
 ```
 
-**Response**:
+**Request for overall metrics** (omit `tool_name` or set to `null`/empty string):
+```json
+{
+    "experiment_ids": ["123"],
+    "start_time": 1640995200000,
+    "end_time": 1640998800000,
+    "time_bucket": "hour"
+}
+```
+
+**Response for specific tool**:
 ```json
 {
     "data": {
@@ -475,6 +485,27 @@ All endpoints return both summary totals and time-series data:
             "volume": [...],
             "latency": [...],
             "errors": [...]
+        }
+    }
+}
+```
+
+**Response for overall metrics**:
+```json
+{
+    "data": {
+        "tool_name": null,
+        "trace_count": 59147,
+        "invocation_count": 59147,
+        "error_count": 28607,
+        "error_rate": 48.4,
+        "p50_latency": 297.5,
+        "p90_latency": 450.0,
+        "p99_latency": 528.1,
+        "time_series": {
+            "volume": [...], // aggregated across all tools
+            "latency": [...], // percentiles across all tools
+            "errors": [...] // aggregated errors
         }
     }
 }

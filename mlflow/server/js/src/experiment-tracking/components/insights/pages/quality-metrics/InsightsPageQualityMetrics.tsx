@@ -8,10 +8,14 @@
 import React from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
 import { useAssessmentDiscovery, useAssessmentData, useCorrelations } from '../../hooks/useInsightsApi';
+import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
+import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
 import { TrendsCardSkeleton, TrendsEmptyState } from '../../components/TrendsSkeleton';
+import { NumericValueSelector } from '../../components/NumericValueSelector';
+import { DataTypeTag } from '../../components/DataTypeTag';
 
 interface InsightsPageQualityMetricsProps {
   experimentId?: string;
@@ -20,9 +24,17 @@ interface InsightsPageQualityMetricsProps {
 export const InsightsPageQualityMetrics = ({ experimentId }: InsightsPageQualityMetricsProps) => {
   const { theme } = useDesignSystemTheme();
   
+  // Get chart time domain from global time range
+  const { xDomain } = useInsightsChartTimeRange();
+  
+  // Get automatic time bucket based on time range duration
+  const timeBucket = useTimeBucket();
+  
   // Discover all assessments in the time window
+  // Handle experimentId properly - "0" is a valid experiment ID
+  const experimentIds = experimentId !== undefined && experimentId !== null ? [experimentId] : [];
   const { data: assessmentsData, isLoading, error } = useAssessmentDiscovery(
-    experimentId ? [experimentId] : [],
+    experimentIds,
     { refetchInterval: 60000 } // Refresh every minute
   );
 
@@ -85,6 +97,8 @@ export const InsightsPageQualityMetrics = ({ experimentId }: InsightsPageQuality
             key={assessment.name}
             assessment={assessment}
             experimentId={experimentId}
+            xDomain={xDomain}
+            timeBucket={timeBucket}
           />
         ))}
       </div>
@@ -96,27 +110,33 @@ export const InsightsPageQualityMetrics = ({ experimentId }: InsightsPageQuality
 interface AssessmentCardProps {
   assessment: {
     name: string;
-    data_type: 'boolean' | 'numeric' | 'string';
+    data_type: 'boolean' | 'pass_fail' | 'numeric' | 'string';
     source: string;
     count: number;
   };
   experimentId?: string;
+  xDomain?: [number | undefined, number | undefined];
+  timeBucket: 'hour' | 'day' | 'week';
 }
 
-const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentId }) => {
+const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentId, xDomain, timeBucket }) => {
   const { theme } = useDesignSystemTheme();
   
-  // Fetch detailed assessment data
+  // Handle experimentId properly - "0" is a valid experiment ID
+  const experimentIds = experimentId !== undefined && experimentId !== null ? [experimentId] : [];
+  
+  // Fetch detailed assessment data with the correct time bucket
   const { data: assessmentData, isLoading } = useAssessmentData(
     assessment.name,
-    experimentId ? [experimentId] : [],
-    { refetchInterval: 30000 }
+    experimentIds,
+    { refetchInterval: 30000 },
+    timeBucket  // Pass the time bucket to the hook
   );
 
   // Fetch correlations for assessment failures/below P50
   const { data: correlationsData } = useCorrelations(
     {
-      experiment_ids: experimentId ? [experimentId] : [],
+      experiment_ids: experimentIds,
       filter_string: assessment.data_type === 'boolean' 
         ? `assessment.${assessment.name}:false`
         : assessment.data_type === 'numeric'
@@ -143,181 +163,143 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
     type: item.dimension.startsWith('tag') ? 'tag' as const : 'tool' as const,
   })) || [];
 
+
   // Render based on assessment type
-  if (assessment.data_type === 'boolean' && assessmentData) {
+  if ((assessment.data_type === 'boolean' || assessment.data_type === 'pass_fail') && assessmentData) {
     const failureRate = assessmentData.summary.failure_rate || 0;
-    const chartData = assessmentData.time_series.map(point => ({
-      timeBucket: new Date(point.time_bucket),
-      value: point.failure_rate || 0,
-    }));
+    const chartData = assessmentData.time_series.map(point => {
+      const date = new Date(point.time_bucket);
+      
+      // For day/week buckets, adjust the timestamp to show correct local date
+      // This ensures proper alignment across all insights charts
+      if (timeBucket === 'day' || timeBucket === 'week') {
+        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+        date.setTime(date.getTime() + offsetMs);
+      }
+      
+      return {
+        timeBucket: date,
+        value: point.failure_rate || 0,
+      };
+    });
 
     return (
       <InsightsCard
-        title={assessment.name}
-        subtitle={`${assessmentData.summary.total_count} assessments • ${assessmentData.summary.failure_count} failures`}
-      >
-        {/* Failure Rate Display */}
-        <div css={{
-          fontSize: '32px',
-          fontWeight: 700,
-          color: failureRate > 10 ? theme.colors.textValidationDanger : theme.colors.textValidationSuccess,
-          marginBottom: theme.spacing.md,
-        }}>
-          {failureRate.toFixed(1)}% failure rate
-        </div>
-
-        {/* Source Information */}
-        <div css={{
-          fontSize: theme.typography.fontSizeSm,
-          color: theme.colors.textSecondary,
-          marginBottom: theme.spacing.lg,
-        }}>
-          Sources: {assessment.source}
-        </div>
-
-        {/* Failure Rate Chart */}
-        <div css={{ marginBottom: theme.spacing.lg }}>
-          <TrendsLineChart
-            points={chartData}
-            yAxisTitle="Failure Rate (%)"
-            yAxisFormat=".1%"
-            title="Failure Rate Over Time"
-            lineColors={[theme.colors.textValidationDanger]}
-            height={200}
-          />
-        </div>
-
-        {/* MANDATORY Correlations Section */}
-        {correlations.length > 0 ? (
-          <div>
-            <h4 css={{ 
-              margin: `0 0 ${theme.spacing.sm}px 0`,
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.textPrimary,
-            }}>
-              Correlations for Failures
-            </h4>
-            <TrendsCorrelationsChart
-              title="Failure Correlations"
-              data={correlations}
-              onItemClick={(item) => {
-                console.log('Assessment failure correlation clicked:', item);
-              }}
-            />
-          </div>
-        ) : (
+        title={
+          <span>
+            {assessment.name}
+            <DataTypeTag dataType={assessment.data_type} />
+          </span>
+        }
+        subtitle={
           <div css={{
-            padding: theme.spacing.md,
-            background: theme.colors.backgroundSecondary,
-            borderRadius: theme.general.borderRadiusBase,
-            textAlign: 'center',
-            color: theme.colors.textSecondary,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: theme.spacing.md,
           }}>
-            No correlations for failures found
+            <div>
+              <div css={{ 
+                fontSize: '18px', 
+                fontWeight: 300, 
+                color: failureRate > 10 ? theme.colors.textValidationDanger : theme.colors.textValidationSuccess,
+              }}>
+                {failureRate.toFixed(1)}%
+              </div>
+              <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                Failure Rate
+              </div>
+            </div>
+            <div>
+              <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
+                {assessmentData.summary.total_count}
+              </div>
+              <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                Assessments
+              </div>
+            </div>
           </div>
-        )}
+        }
+      >
+        {/* Failure Rate Chart */}
+        <TrendsLineChart
+          points={chartData}
+          yAxisTitle="Failure Rate (%)"
+          yAxisFormat=".1%"
+          title="Failure Rate Over Time"
+          timeBucket={timeBucket}
+          lineColors={[theme.colors.textValidationDanger]}
+          height={200}
+          xDomain={xDomain}
+          yAxisOptions={{
+            range: [0, 1], // Fixed range from 0.0 to 1.0 (0% to 100% when formatted)
+            dtick: 0.2, // Show ticks every 0.2 (20% increments: 0%, 20%, 40%, 60%, 80%, 100%)
+          }}
+        />
       </InsightsCard>
     );
   }
 
   if (assessment.data_type === 'numeric' && assessmentData) {
-    const chartData = assessmentData.time_series.map(point => ({
-      timeBucket: new Date(point.time_bucket),
-      value: point.p50_value || 0,
-    }));
+    const chartData = assessmentData.time_series.map(point => {
+      const date = new Date(point.time_bucket);
+      
+      // For day/week buckets, adjust the timestamp to show correct local date
+      // This ensures proper alignment across all insights charts
+      if (timeBucket === 'day' || timeBucket === 'week') {
+        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+        date.setTime(date.getTime() + offsetMs);
+      }
+      
+      return {
+        timeBucket: date,
+        value: point.p50_value || 0,
+      };
+    });
 
     return (
       <InsightsCard
-        title={assessment.name}
-        subtitle={`${assessmentData.summary.total_count} assessments • ${assessmentData.summary.below_p50_count} below P50`}
-      >
-        {/* Percentile Metrics Display */}
-        <div css={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: theme.spacing.md,
-          marginBottom: theme.spacing.lg,
-          padding: theme.spacing.md,
-          background: theme.colors.backgroundSecondary,
-          borderRadius: theme.general.borderRadiusBase,
-        }}>
-          <div>
-            <div css={{ fontSize: '20px', fontWeight: 600 }}>
-              {assessmentData.summary.p50_value?.toFixed(2) || 'N/A'}
-            </div>
-            <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-              P50
-            </div>
-          </div>
-          <div>
-            <div css={{ fontSize: '20px', fontWeight: 600 }}>
-              {assessmentData.summary.p90_value?.toFixed(2) || 'N/A'}
-            </div>
-            <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-              P90
-            </div>
-          </div>
-          <div>
-            <div css={{ fontSize: '20px', fontWeight: 600 }}>
-              {assessmentData.summary.p99_value?.toFixed(2) || 'N/A'}
-            </div>
-            <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-              P99
-            </div>
-          </div>
-        </div>
-
-        {/* Source Information */}
-        <div css={{
-          fontSize: theme.typography.fontSizeSm,
-          color: theme.colors.textSecondary,
-          marginBottom: theme.spacing.lg,
-        }}>
-          Sources: {assessment.source}
-        </div>
-
-        {/* Value Trend Chart */}
-        <div css={{ marginBottom: theme.spacing.lg }}>
-          <TrendsLineChart
-            points={chartData}
-            yAxisTitle="Assessment Value"
-            title="P50 Trend Over Time"
-            lineColors={[theme.colors.actionDefaultBackgroundDefault]}
-            height={200}
-          />
-        </div>
-
-        {/* MANDATORY Correlations Section */}
-        {correlations.length > 0 ? (
-          <div>
-            <h4 css={{ 
-              margin: `0 0 ${theme.spacing.sm}px 0`,
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.textPrimary,
-            }}>
-              Correlations for Below P50
-            </h4>
-            <TrendsCorrelationsChart
-              title="Below P50 Correlations"
-              data={correlations}
-              onItemClick={(item) => {
-                console.log('Assessment below P50 correlation clicked:', item);
-              }}
-            />
-          </div>
-        ) : (
+        title={
+          <span>
+            {assessment.name}
+            <DataTypeTag dataType={assessment.data_type} />
+          </span>
+        }
+        subtitle={
           <div css={{
-            padding: theme.spacing.md,
-            background: theme.colors.backgroundSecondary,
-            borderRadius: theme.general.borderRadiusBase,
-            textAlign: 'center',
-            color: theme.colors.textSecondary,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: theme.spacing.md,
           }}>
-            No correlations found
+            <div>
+              <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
+                {assessmentData.summary.total_count}
+              </div>
+              <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                Assessments
+              </div>
+            </div>
+            <div>
+              <NumericValueSelector 
+                values={{
+                  p50: assessmentData.summary.p50_value,
+                  p90: assessmentData.summary.p90_value,
+                  p99: assessmentData.summary.p99_value,
+                }}
+              />
+            </div>
           </div>
-        )}
+        }
+      >
+        {/* Value Trend Chart */}
+        <TrendsLineChart
+          points={chartData}
+          yAxisTitle="Assessment Value"
+          title="P50 Trend Over Time"
+          timeBucket={timeBucket}
+          lineColors={[theme.colors.actionDefaultBackgroundDefault]}
+          height={200}
+          xDomain={xDomain}
+        />
       </InsightsCard>
     );
   }
@@ -325,8 +307,13 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
   // String assessments - not yet supported
   return (
     <InsightsCard
-      title={assessment.name}
-      subtitle={`Data type: string`}
+      title={
+        <span>
+          {assessment.name}
+          <DataTypeTag dataType={assessment.data_type} />
+        </span>
+      }
+      subtitle="Visualization not yet supported"
     >
       <div css={{
         display: 'flex',
@@ -347,17 +334,6 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
         </div>
       </div>
 
-      {/* MANDATORY Correlations Section - Empty for string types */}
-      <div css={{
-        marginTop: theme.spacing.lg,
-        padding: theme.spacing.md,
-        background: theme.colors.backgroundSecondary,
-        borderRadius: theme.general.borderRadiusBase,
-        textAlign: 'center',
-        color: theme.colors.textSecondary,
-      }}>
-        Correlations not available for string assessments
-      </div>
     </InsightsCard>
   );
 };

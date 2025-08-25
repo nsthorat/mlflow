@@ -152,7 +152,10 @@ def _get_rest_store(store_uri, **_):
 
 
 def _get_databricks_rest_store(store_uri, **_):
-    return RestStore(partial(get_databricks_host_creds, store_uri))
+    # Temporarily use DatabricksSqlStore instead of RestStore for "databricks" scheme
+    # This enables direct SQL queries for trace searches while maintaining compatibility
+    from mlflow.store.tracking.databricks_sql_store import DatabricksSqlStore
+    return DatabricksSqlStore(store_uri)
 
 
 def _get_databricks_uc_rest_store(store_uri, **_):

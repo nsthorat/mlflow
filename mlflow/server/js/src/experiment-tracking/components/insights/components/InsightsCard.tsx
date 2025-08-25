@@ -8,8 +8,8 @@ import React from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
 
 interface InsightsCardProps {
-  title: string;
-  subtitle?: string;
+  title: string | React.ReactNode;
+  subtitle?: string | React.ReactNode;
   headerContent?: React.ReactNode;
   children: React.ReactNode;
   error?: any;
@@ -28,17 +28,18 @@ export const InsightsCard = ({
     return (
       <div
         css={{
-          padding: theme.spacing.lg,
+          padding: `${theme.spacing.lg / 2}px ${theme.spacing.lg}px`,
           border: `1px solid ${theme.colors.border}`,
           borderRadius: theme.borders.borderRadiusMd,
           backgroundColor: theme.colors.backgroundPrimary,
-          marginBottom: theme.spacing.md,
+          overflow: 'hidden',
+          minWidth: 0, // Important for grid items to respect grid constraints
         }}
       >
         <h3 css={{ 
           margin: `0 0 ${theme.spacing.sm}px 0`,
           fontSize: theme.typography.fontSizeLg,
-          fontWeight: 600,
+          fontWeight: 400,
         }}>
           {title}
         </h3>
@@ -52,24 +53,26 @@ export const InsightsCard = ({
   return (
     <div
       css={{
-        padding: theme.spacing.lg,
+        padding: `${theme.spacing.lg / 2}px ${theme.spacing.lg}px`,
         border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.borders.borderRadiusMd,
         backgroundColor: theme.colors.backgroundPrimary,
-        marginBottom: theme.spacing.md,
+        minWidth: 0, // Important for grid items to respect grid constraints
+        display: 'flex',
+        flexDirection: 'column',
+        gap: theme.spacing.sm,
       }}
     >
       <div css={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.md,
       }}>
         <div>
           <h3 css={{ 
             margin: 0,
             fontSize: theme.typography.fontSizeLg,
-            fontWeight: 600,
+            fontWeight: 500,
           }}>
             {title}
           </h3>
@@ -78,6 +81,7 @@ export const InsightsCard = ({
               fontSize: theme.typography.fontSizeSm,
               color: theme.colors.textSecondary,
               marginTop: theme.spacing.xs,
+              marginBottom: theme.spacing.md,
             }}>
               {subtitle}
             </div>

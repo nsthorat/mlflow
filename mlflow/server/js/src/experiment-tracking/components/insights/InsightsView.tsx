@@ -32,8 +32,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'quality', label: 'Quality Metrics', icon: '✅', implemented: true },
   { id: 'tools', label: 'Tools', icon: '🔧', implemented: true },
   { id: 'tags', label: 'Tags', icon: '🏷️', implemented: true },
-  { id: 'topics', label: 'Topics', icon: '💬', implemented: false },
-  { id: 'create', label: 'Create View', icon: '➕', implemented: false },
+  { id: 'create', label: 'Create View', icon: '➕', implemented: true },
 ];
 
 const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }) => {
@@ -50,18 +49,38 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }
         return <InsightsPageTools experimentId={experimentId} />;
       case 'tags':
         return <InsightsPageTags experimentId={experimentId} />;
-      case 'topics':
-        return (
-          <div style={{ padding: theme.spacing.lg }}>
-            <h2>Topics</h2>
-            <p style={{ color: theme.colors.textSecondary }}>Topic clustering and analysis placeholder...</p>
-          </div>
-        );
       case 'create':
         return (
           <div style={{ padding: theme.spacing.lg }}>
-            <h2>Create View</h2>
-            <p style={{ color: theme.colors.textSecondary }}>Custom view creation placeholder...</p>
+            <h2>Create Custom View</h2>
+            <div style={{ marginTop: theme.spacing.md }}>
+              <p style={{ color: theme.colors.textSecondary, marginBottom: theme.spacing.md }}>
+                Create custom views to analyze your traces with personalized metrics and visualizations.
+              </p>
+              <div style={{ 
+                padding: theme.spacing.lg, 
+                border: `2px dashed ${theme.colors.border}`,
+                borderRadius: theme.general.borderRadiusBase,
+                textAlign: 'center',
+                background: theme.colors.backgroundSecondary
+              }}>
+                <p style={{ color: theme.colors.textPlaceholder, fontSize: theme.typography.fontSizeLg }}>
+                  Drag and drop components here to build your custom view
+                </p>
+                <button style={{
+                  marginTop: theme.spacing.md,
+                  padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
+                  background: theme.colors.actionPrimaryBackgroundDefault,
+                  color: theme.colors.white,
+                  border: 'none',
+                  borderRadius: theme.general.borderRadiusBase,
+                  cursor: 'pointer',
+                  fontSize: theme.typography.fontSizeBase
+                }}>
+                  + Add Component
+                </button>
+              </div>
+            </div>
           </div>
         );
       default:

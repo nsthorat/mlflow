@@ -66,10 +66,23 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
 
   // Transform time series data for chart
   // Backend already provides error_rate as percentage (0-100), so divide by 100 for decimal format
-  const chartData = errorData.time_series.map(point => ({
-    timeBucket: new Date(point.time_bucket),
-    value: point.error_rate / 100, // Convert percentage to decimal for .1% format
-  }));
+  // For daily/weekly buckets, adjust timestamps for proper local display
+  const chartData = errorData.time_series.map(point => {
+    const date = new Date(point.time_bucket);
+    
+    // For day/week buckets, adjust the timestamp to show correct local date
+    if (timeBucket === 'day' || timeBucket === 'week') {
+      // The backend returns UTC midnight, but we want to display local midnight
+      // Add the timezone offset to compensate
+      const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+      date.setTime(date.getTime() + offsetMs);
+    }
+    
+    return {
+      timeBucket: date,
+      value: point.error_rate / 100, // Convert percentage to decimal for .1% format
+    };
+  });
 
   // Transform correlations for display
   const correlations = correlationsData?.data.map(item => ({
@@ -89,65 +102,33 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
   return (
     <InsightsCard
       title="Error Rate"
-      subtitle={hasData ? `${errorData.summary.error_count} errors out of ${errorData.summary.total_count} traces` : undefined}
+      subtitle={
+        hasData ? (
+          <div css={{ 
+            fontSize: '18px', 
+            fontWeight: 300, 
+            color: getErrorRateColor(errorData.summary.error_rate),
+          }}>
+            {errorData.summary.error_rate.toFixed(1)}%
+          </div>
+        ) : undefined
+      }
     >
       {hasData ? (
         <>
-          {/* Summary Statistics */}
-          <div
-        css={{
-          display: 'flex',
-          gap: theme.spacing.lg,
-          marginBottom: theme.spacing.lg,
-          padding: theme.spacing.md,
-          background: theme.colors.backgroundSecondary,
-          borderRadius: theme.general.borderRadiusBase,
-        }}
-      >
-        <div css={{ flex: 1, textAlign: 'center' }}>
-          <div 
-            css={{ 
-              fontSize: '32px', 
-              fontWeight: 700, 
-              color: getErrorRateColor(errorData.summary.error_rate) 
-            }}
-          >
-            {errorData.summary.error_rate.toFixed(1)}%
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Overall Error Rate
-          </div>
-        </div>
-        
-        <div css={{ flex: 1, textAlign: 'center' }}>
-          <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.textValidationDanger }}>
-            {errorData.summary.error_count.toLocaleString()}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Total Errors
-          </div>
-        </div>
-        
-        <div css={{ flex: 1, textAlign: 'center' }}>
-          <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.textPrimary }}>
-            {errorData.summary.total_count.toLocaleString()}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Total Traces
-          </div>
-        </div>
-      </div>
 
       {/* Time Series Chart */}
-      <div css={{ marginBottom: theme.spacing.lg }}>
+      <div>
         <TrendsLineChart
           points={chartData}
           yAxisTitle="Error Rate (%)"
           yAxisFormat=".1%"
           title="Error Rate Over Time"
+          timeBucket={timeBucket}
           lineColors={[theme.colors.textValidationDanger]}
           height={250}
           xDomain={xDomain}
+          yDomain={[0, 1]}
         />
       </div>
 

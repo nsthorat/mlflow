@@ -118,3 +118,32 @@ def validate_time_bucket(time_bucket: str) -> TimeBucketType:
         raise ValueError(f"Unsupported time_bucket: {time_bucket}. Must be 'hour', 'day', or 'week'")
     
     return time_bucket  # type: ignore
+
+
+def get_time_bucket_value(timestamp_ms: int, time_bucket: TimeBucketType, offset_ms: int = 0) -> int:
+    """
+    Calculate the bucket value for a given timestamp.
+    
+    This is the Python equivalent of the SQL expression in get_time_bucket_expression.
+    
+    Args:
+        timestamp_ms: Timestamp in milliseconds
+        time_bucket: Bucket size - 'hour', 'day', or 'week'
+        offset_ms: Timezone offset in milliseconds (for day/week bucketing)
+        
+    Returns:
+        The bucket value (start of the bucket) in milliseconds
+    """
+    if time_bucket == "hour":
+        # Round to nearest hour
+        return (timestamp_ms // 3600000) * 3600000
+    elif time_bucket == "day":
+        # Adjust for timezone, round to day, then adjust back
+        adjusted = timestamp_ms + offset_ms
+        return (adjusted // 86400000) * 86400000 - offset_ms
+    elif time_bucket == "week":
+        # Adjust for timezone, round to week, then adjust back
+        adjusted = timestamp_ms + offset_ms
+        return (adjusted // 604800000) * 604800000 - offset_ms
+    else:
+        raise ValueError(f"Unsupported time_bucket: {time_bucket}")

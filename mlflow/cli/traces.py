@@ -770,3 +770,205 @@ def delete_assessment(trace_id: str, assessment_id: str) -> None:
     client = TracingClient()
     client.delete_assessment(trace_id, assessment_id)
     click.echo(f"Deleted assessment {assessment_id} from trace {trace_id}.")
+
+
+@commands.command("calculate-correlation")
+@click.option(
+    "--experiment-ids",
+    type=click.STRING,
+    required=True,
+    help="Comma-separated list of experiment IDs to analyze",
+)
+@click.option(
+    "--filter1",
+    type=click.STRING,
+    required=True,
+    help="First filter condition (e.g., \"status = 'ERROR'\")",
+)
+@click.option(
+    "--filter2",
+    type=click.STRING,
+    required=True,
+    help="Second filter condition (e.g., \"execution_time > 5000\")",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["json", "table", "csv"]),
+    default="table",
+    help="Output format (default: table)",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Show detailed NPMI interpretation",
+)
+def calculate_correlation(
+    experiment_ids: str,
+    filter1: str,
+    filter2: str,
+    output: str,
+    verbose: bool,
+) -> None:
+    """
+    Calculate correlation (NPMI) between two trace filter conditions.
+    
+    NPMI (Normalized Pointwise Mutual Information) measures how much more (or less) 
+    likely traces are to satisfy both conditions compared to if they were independent.
+    
+    NPMI Score Interpretation:
+    • -1.0: Perfect negative correlation (mutually exclusive)
+    • -0.5 to -1.0: Strong negative correlation
+    • -0.2 to -0.5: Moderate negative correlation
+    • -0.2 to 0.2: Weak or no correlation
+    • 0.2 to 0.5: Moderate positive correlation
+    • 0.5 to 1.0: Strong positive correlation
+    • 1.0: Perfect positive correlation
+    
+    Examples:
+    
+    \b
+    # Calculate correlation between errors and slow execution
+    mlflow traces calculate-correlation \\
+        --experiment-ids 123,456 \\
+        --filter1 "status = 'ERROR'" \\
+        --filter2 "execution_time > 5000"
+    
+    \b
+    # Analyze correlation for specific tags
+    mlflow traces calculate-correlation \\
+        --experiment-ids 123 \\
+        --filter1 "tags.tool = 'langchain'" \\
+        --filter2 "tags.env = 'production'" \\
+        --output json
+    
+    \b
+    # Complex filters with verbose interpretation
+    mlflow traces calculate-correlation \\
+        --experiment-ids 123 \\
+        --filter1 "status = 'OK' AND execution_time < 1000" \\
+        --filter2 "tags.cache_hit = 'true'" \\
+        --verbose
+    """
+    from mlflow.tracing.client import TracingClient
+    from mlflow.tracing.analysis import TraceFilterCorrelationResult
+    
+    # Parse experiment IDs
+    exp_ids = [exp_id.strip() for exp_id in experiment_ids.split(",")]
+    
+    # Get correlation result
+    client = TracingClient()
+    try:
+        result = client.calculate_trace_filter_correlation(
+            experiment_ids=exp_ids,
+            filter_string1=filter1,
+            filter_string2=filter2,
+        )
+    except Exception as e:
+        click.echo(f"Error calculating correlation: {e}", err=True)
+        raise click.Abort()
+    
+    # Interpret NPMI score
+    def interpret_npmi(score: float) -> tuple[str, str]:
+        """Return correlation strength and description."""
+        if score == -1.0:
+            return "Perfect Negative", "Filters are mutually exclusive"
+        elif score < -0.5:
+            return "Strong Negative", "Filters rarely co-occur"
+        elif score < -0.2:
+            return "Moderate Negative", "Filters tend not to co-occur"
+        elif score < 0.2:
+            return "Weak/None", "Filters are mostly independent"
+        elif score < 0.5:
+            return "Moderate Positive", "Filters tend to co-occur"
+        elif score < 1.0:
+            return "Strong Positive", "Filters frequently co-occur"
+        else:
+            return "Perfect Positive", "Filters always co-occur together"
+    
+    # Format output based on selection
+    if output == "json":
+        import json
+        output_dict = {
+            "npmi": result.npmi,
+            "confidence_lower": result.confidence_lower,
+            "confidence_upper": result.confidence_upper,
+            "filter_string1_count": result.filter_string1_count,
+            "filter_string2_count": result.filter_string2_count,
+            "joint_count": result.joint_count,
+            "total_count": result.total_count,
+        }
+        if verbose:
+            strength, _ = interpret_npmi(result.npmi)
+            output_dict["interpretation"] = strength.lower().replace(" ", "_")
+        click.echo(json.dumps(output_dict, indent=2))
+    
+    elif output == "csv":
+        # CSV format
+        import csv
+        import sys
+        writer = csv.writer(sys.stdout)
+        writer.writerow([
+            "npmi", "confidence_lower", "confidence_upper", 
+            "filter1_count", "filter2_count", "joint_count", "total_count"
+        ])
+        writer.writerow([
+            result.npmi,
+            result.confidence_lower or "",
+            result.confidence_upper or "",
+            result.filter_string1_count,
+            result.filter_string2_count,
+            result.joint_count,
+            result.total_count,
+        ])
+    
+    else:  # table format (default)
+        click.echo("\nTrace Filter Correlation Analysis")
+        click.echo("=" * 50)
+        click.echo(f"Filter 1: {filter1}")
+        click.echo(f"Filter 2: {filter2}")
+        click.echo(f"Experiments: {', '.join(exp_ids)}")
+        click.echo()
+        
+        # Results table
+        click.echo("Results:")
+        click.echo("┌─────────────────────────┬──────────────┐")
+        click.echo("│ Metric                  │ Value        │")
+        click.echo("├─────────────────────────┼──────────────┤")
+        click.echo(f"│ NPMI Score              │ {result.npmi:12.4f} │")
+        
+        strength, description = interpret_npmi(result.npmi)
+        click.echo(f"│ Correlation             │ {strength:12s} │")
+        click.echo(f"│ Filter 1 Count          │ {result.filter_string1_count:12d} │")
+        click.echo(f"│ Filter 2 Count          │ {result.filter_string2_count:12d} │")
+        click.echo(f"│ Joint Count             │ {result.joint_count:12d} │")
+        click.echo(f"│ Total Traces            │ {result.total_count:12d} │")
+        
+        if result.confidence_lower is not None and result.confidence_upper is not None:
+            conf_str = f"[{result.confidence_lower:.2f}, {result.confidence_upper:.2f}]"
+            click.echo(f"│ 95% Confidence Interval │ {conf_str:12s} │")
+        
+        click.echo("└─────────────────────────┴──────────────┘")
+        
+        if verbose:
+            click.echo()
+            click.echo(f"Interpretation: {description}")
+            
+            # Calculate percentages for better understanding
+            if result.total_count > 0:
+                pct1 = (result.filter_string1_count / result.total_count) * 100
+                pct2 = (result.filter_string2_count / result.total_count) * 100
+                joint_pct = (result.joint_count / result.total_count) * 100
+                
+                click.echo()
+                click.echo("Coverage Statistics:")
+                click.echo(f"• Filter 1 matches {pct1:.1f}% of traces")
+                click.echo(f"• Filter 2 matches {pct2:.1f}% of traces")
+                click.echo(f"• Both filters match {joint_pct:.1f}% of traces")
+                
+                if result.filter_string1_count > 0:
+                    conditional_pct = (result.joint_count / result.filter_string1_count) * 100
+                    click.echo(f"• Of traces matching Filter 1, {conditional_pct:.1f}% also match Filter 2")
+                
+                if result.filter_string2_count > 0:
+                    conditional_pct = (result.joint_count / result.filter_string2_count) * 100
+                    click.echo(f"• Of traces matching Filter 2, {conditional_pct:.1f}% also match Filter 1")

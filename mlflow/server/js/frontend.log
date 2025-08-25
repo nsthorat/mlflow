@@ -102,12 +102,11 @@ Webpack config: {
 [HPM] Proxy created: /graphql  -> http://localhost:5000/
 [HPM] Proxy created: /get-artifact  -> http://localhost:5000/
 [HPM] Proxy created: /model-versions/get-artifact  -> http://localhost:5000/
-(node:84668) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:9660) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:84668) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:9660) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
 Starting the development server...
 
-(node:84668) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
 Compiled with warnings.
 
 Failed to parse source map from '/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/node_modules/@ag-grid-community/client-side-row-model/src/clientSideRowModel/clientSideNodeManager.ts' file: Error: ENOENT: no such file or directory, open '/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/node_modules/@ag-grid-community/client-side-row-model/src/clientSideRowModel/clientSideNodeManager.ts'
@@ -133,22 +132,20 @@ Failed to parse source map from '/Users/nikhil.thorat/Code/mlflow-corey/mlflow/s
 Search for the keywords to learn more about each warning.
 To ignore, add // eslint-disable-next-line to the line before.
 
-assets by path static/js/*.js 59.5 MiB
-  assets by chunk 39.3 MiB (id hint: vendors)
-    asset static/js/vendors-node_modules_invariant_browser_js-node_modules_plotly_js_lib_index_js-node_modules_ta-df76ad.8cad1eb0.chunk.js 9.51 MiB [emitted] [immutable] (id hint: vendors) 1 related asset
-    asset static/js/vendors-node_modules_react-plotly_js_react-plotly_js.808527e7.chunk.js 9.21 MiB [emitted] [immutable] (id hint: vendors) 1 related asset
-    + 17 assets
+assets by path static/js/*.js 59.6 MiB
+  assets by chunk 39.4 MiB (id hint: vendors)
+    asset static/js/vendors-node_modules_plotly_js_lib_index_js-node_modules_tanstack_react-virtual_dist_esm_inde-649ad2.2ad8c909.chunk.js 9.51 MiB [emitted] [immutable] (id hint: vendors) 1 related asset
+    + 19 assets
   + 59 assets
 assets by path static/media/ 2.4 MiB
   assets by path static/media/*.svg 517 KiB 16 assets
   + 5 assets
 assets by path lib/notebook-trace-renderer/ 381 KiB
-  asset lib/notebook-trace-renderer/js/ml-model-trace-renderer.899505501546062cf954.js 381 KiB [emitted] [immutable] (name: ml-model-trace-renderer) 1 related asset
+  asset lib/notebook-trace-renderer/js/ml-model-trace-renderer.f9084d11f05b712079fb.js 381 KiB [emitted] [immutable] (name: ml-model-trace-renderer) 1 related asset
   asset lib/notebook-trace-renderer/index.html 208 bytes [emitted]
-asset asset-manifest.json 38.7 KiB [emitted]
+asset asset-manifest.json 39.2 KiB [emitted]
 asset index.html 901 bytes [emitted]
-cached modules 45.2 MiB (javascript) 2.48 MiB (asset) [cached] 7813 modules
-runtime modules 79 KiB 37 modules
+cached modules 45.7 MiB (javascript) 2.48 MiB (asset) 79.1 KiB (runtime) [cached] 8153 modules
 
 WARNING in ./node_modules/@ag-grid-community/client-side-row-model/dist/esm/es5/clientSideRowModel/clientSideNodeManager.js
 Module Warning (from ./node_modules/source-map-loader/dist/cjs.js):
@@ -281,26 +278,184 @@ Failed to parse source map from '/Users/nikhil.thorat/Code/mlflow-corey/mlflow/s
 10 warnings have detailed information that is not shown.
 Use 'stats.errorDetails: true' resp. '--stats-error-details' to show it.
 
-webpack 5.100.1 compiled with 10 warnings in 4912 ms
+webpack 5.100.1 compiled with 10 warnings in 4716 ms
 Files successfully emitted, waiting for typecheck results...
 Issues checking in progress...
-ERROR in src/experiment-tracking/components/insights/hooks/useInsightsApi.ts:111:5
+ERROR in src/experiment-tracking/components/insights/components/TrendsBarChart.tsx:26:3
+TS2820: Type '"hour"' is not assignable to type 'TimeBucket'. Did you mean '"HOUR"'?
+    24 |   yAxisFormat,
+    25 |   points,
+  > 26 |   timeBucket = 'hour',
+       |   ^^^^^^^^^^
+    27 |   barColor,
+    28 |   aggregationType,
+    29 |   isLoading,
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsBarChart.tsx:53:49
+TS2367: This comparison appears to be unintentional because the types 'TimeBucket' and '"day"' have no overlap.
+    51 |     
+    52 |     // For day/week buckets with xDomain, generate ticks for the full range
+  > 53 |     if (xDomain && xDomain[0] && xDomain[1] && (timeBucket === 'day' || timeBucket === 'week')) {
+       |                                                 ^^^^^^^^^^^^^^^^^^^^
+    54 |       return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    55 |     }
+    56 |     
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsBarChart.tsx:53:73
+TS2367: This comparison appears to be unintentional because the types 'TimeBucket' and '"week"' have no overlap.
+    51 |     
+    52 |     // For day/week buckets with xDomain, generate ticks for the full range
+  > 53 |     if (xDomain && xDomain[0] && xDomain[1] && (timeBucket === 'day' || timeBucket === 'week')) {
+       |                                                                         ^^^^^^^^^^^^^^^^^^^^^
+    54 |       return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    55 |     }
+    56 |     
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsBarChart.tsx:58:40
+TS2345: Argument of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/types/insightsTypes").TimeBucket' is not assignable to parameter of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/utils/chartDateFormatting").TimeBucket'.
+  Type '"MONTH"' is not assignable to type 'TimeBucket'.
+    56 |     
+    57 |     // Otherwise use the data points
+  > 58 |     return getPlotlyTickConfig(points, timeBucket);
+       |                                        ^^^^^^^^^^
+    59 |   }, [points, timeBucket, xDomain]);
+    60 |
+    61 |   // Create Plotly data with smart tooltips
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsBarChart.tsx:71:87
+TS2345: Argument of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/types/insightsTypes").TimeBucket' is not assignable to parameter of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/utils/chartDateFormatting").TimeBucket'.
+  Type '"MONTH"' is not assignable to type 'TimeBucket'.
+    69 |       },
+    70 |       hovertemplate: points.map(p => 
+  > 71 |         `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: ${formatTooltipDate(p.timeBucket, timeBucket)}<extra></extra>`
+       |                                                                                       ^^^^^^^^^^
+    72 |       )[0], // Use first point's format as template
+    73 |     }
+    74 |   ];
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsLineChart.tsx:36:3
+TS2820: Type '"hour"' is not assignable to type 'TimeBucket'. Did you mean '"HOUR"'?
+    34 |   yAxisFormat,
+    35 |   points,
+  > 36 |   timeBucket = 'hour',
+       |   ^^^^^^^^^^
+    37 |   lineColors = ['#1f77b4'],
+    38 |   isLoading = false,
+    39 |   height = 300,
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsLineChart.tsx:66:49
+TS2367: This comparison appears to be unintentional because the types 'TimeBucket' and '"day"' have no overlap.
+    64 |     
+    65 |     // For day/week buckets with xDomain, generate ticks for the full range
+  > 66 |     if (xDomain && xDomain[0] && xDomain[1] && (timeBucket === 'day' || timeBucket === 'week')) {
+       |                                                 ^^^^^^^^^^^^^^^^^^^^
+    67 |       return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    68 |     }
+    69 |     
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsLineChart.tsx:66:73
+TS2367: This comparison appears to be unintentional because the types 'TimeBucket' and '"week"' have no overlap.
+    64 |     
+    65 |     // For day/week buckets with xDomain, generate ticks for the full range
+  > 66 |     if (xDomain && xDomain[0] && xDomain[1] && (timeBucket === 'day' || timeBucket === 'week')) {
+       |                                                                         ^^^^^^^^^^^^^^^^^^^^^
+    67 |       return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    68 |     }
+    69 |     
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsLineChart.tsx:71:40
+TS2345: Argument of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/types/insightsTypes").TimeBucket' is not assignable to parameter of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/utils/chartDateFormatting").TimeBucket'.
+  Type '"MONTH"' is not assignable to type 'TimeBucket'.
+    69 |     
+    70 |     // Otherwise use the data points
+  > 71 |     return getPlotlyTickConfig(points, timeBucket);
+       |                                        ^^^^^^^^^^
+    72 |   }, [points, timeBucket, xDomain]);
+    73 |
+    74 |   // Create Plotly data traces
+
+ERROR in src/experiment-tracking/components/insights/components/TrendsLineChart.tsx:91:87
+TS2345: Argument of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/types/insightsTypes").TimeBucket' is not assignable to parameter of type 'import("/Users/nikhil.thorat/Code/mlflow-corey/mlflow/server/js/src/experiment-tracking/components/insights/utils/chartDateFormatting").TimeBucket'.
+  Type '"MONTH"' is not assignable to type 'TimeBucket'.
+    89 |       },
+    90 |       hovertemplate: seriesPoints.map(p => 
+  > 91 |         `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: ${formatTooltipDate(p.timeBucket, timeBucket)}<extra></extra>`
+       |                                                                                       ^^^^^^^^^^
+    92 |       )[0], // Use first point's format as template
+    93 |     };
+    94 |   });
+
+ERROR in src/experiment-tracking/components/insights/hooks/useInsightsApi.ts:112:5
 TS2353: Object literal may only specify known properties, and 'timezone' does not exist in type 'LatencyRequest'.
-    109 |     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
-    110 |     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
-  > 111 |     timezone: getUserTimezone(),
+    110 |     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    111 |     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+  > 112 |     timezone: getUserTimezone(),
         |     ^^^^^^^^
-    112 |   };
-    113 |
-    114 |   return useQuery({
+    113 |   };
+    114 |
+    115 |   return useQuery({
 
-ERROR in src/experiment-tracking/components/insights/hooks/useInsightsApi.ts:137:5
+ERROR in src/experiment-tracking/components/insights/hooks/useInsightsApi.ts:138:5
 TS2353: Object literal may only specify known properties, and 'timezone' does not exist in type 'ErrorRequest'.
-    135 |     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
-    136 |     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
-  > 137 |     timezone: getUserTimezone(),
+    136 |     start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    137 |     end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+  > 138 |     timezone: getUserTimezone(),
         |     ^^^^^^^^
-    138 |   };
-    139 |
-    140 |   return useQuery({
+    139 |   };
+    140 |
+    141 |   return useQuery({
 
+ERROR in src/experiment-tracking/components/insights/pages/quality-metrics/InsightsPageQualityMetrics.tsx:154:41
+TS2339: Property 'time_bucket' does not exist on type '{ summary: { total_count?: number | undefined; failure_count?: number | undefined; failure_rate?: number | undefined; below_p50_count?: number | undefined; p50_value?: number | undefined; p90_value?: number | undefined; p99_value?: number | undefined; }; time_series: { ...; }[]; }'.
+    152 |       // For day/week buckets, adjust the timestamp to show correct local date
+    153 |       // Quality metrics typically use hourly buckets, but handle day/week if present
+  > 154 |       const timeBucket = assessmentData.time_bucket || 'hour';
+        |                                         ^^^^^^^^^^^
+    155 |       if (timeBucket === 'day' || timeBucket === 'week') {
+    156 |         const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+    157 |         date.setTime(date.getTime() + offsetMs);
+
+ERROR in src/experiment-tracking/components/insights/pages/quality-metrics/InsightsPageQualityMetrics.tsx:242:41
+TS2339: Property 'time_bucket' does not exist on type '{ summary: { total_count?: number | undefined; failure_count?: number | undefined; failure_rate?: number | undefined; below_p50_count?: number | undefined; p50_value?: number | undefined; p90_value?: number | undefined; p99_value?: number | undefined; }; time_series: { ...; }[]; }'.
+    240 |       // For day/week buckets, adjust the timestamp to show correct local date
+    241 |       // Quality metrics typically use hourly buckets, but handle day/week if present
+  > 242 |       const timeBucket = assessmentData.time_bucket || 'hour';
+        |                                         ^^^^^^^^^^^
+    243 |       if (timeBucket === 'day' || timeBucket === 'week') {
+    244 |         const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+    245 |         date.setTime(date.getTime() + offsetMs);
+
+ERROR in src/experiment-tracking/components/insights/pages/traffic-and-cost/InsightsErrorRateCard.tsx:161:11
+TS2322: Type 'TimeBucket' is not assignable to type 'TimeBucket | undefined'.
+  Type '"hour"' is not assignable to type 'TimeBucket | undefined'. Did you mean '"HOUR"'?
+    159 |           yAxisFormat=".1%"
+    160 |           title="Error Rate Over Time"
+  > 161 |           timeBucket={timeBucket}
+        |           ^^^^^^^^^^
+    162 |           lineColors={[theme.colors.textValidationDanger]}
+    163 |           height={250}
+    164 |           xDomain={xDomain}
+
+ERROR in src/experiment-tracking/components/insights/pages/traffic-and-cost/InsightsLatencyCard.tsx:194:11
+TS2322: Type 'TimeBucket' is not assignable to type 'TimeBucket | undefined'.
+  Type '"hour"' is not assignable to type 'TimeBucket | undefined'. Did you mean '"HOUR"'?
+    192 |           yAxisFormat=".0f ms"
+    193 |           title="Latency Percentiles Over Time"
+  > 194 |           timeBucket={timeBucket}
+        |           ^^^^^^^^^^
+    195 |           height={250}
+    196 |           xDomain={xDomain}
+    197 |           lineColors={[PERCENTILE_COLORS.P50, PERCENTILE_COLORS.P90, PERCENTILE_COLORS.P99]}
+
+ERROR in src/experiment-tracking/components/insights/pages/traffic-and-cost/InsightsVolumeCard.tsx:96:15
+TS2322: Type 'TimeBucket' is not assignable to type 'TimeBucket | undefined'.
+  Type '"hour"' is not assignable to type 'TimeBucket | undefined'. Did you mean '"HOUR"'?
+    94 |               yAxisTitle="Trace Count"
+    95 |               title="Volume Over Time"
+  > 96 |               timeBucket={timeBucket}
+       |               ^^^^^^^^^^
+    97 |               height={200}
+    98 |               xDomain={xDomain}
+    99 |               yAxisFormat="d"
+
+(node:9660) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.

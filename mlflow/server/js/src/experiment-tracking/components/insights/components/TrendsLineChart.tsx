@@ -6,6 +6,8 @@ import React from 'react';
 import { LazyPlot } from '../../LazyPlot';
 import { TimeBucket } from '../types/insightsTypes';
 import { createThemedPlotlyLayout } from '../../runs-charts/components/RunsCharts.common';
+import { getPlotlyTickConfig, getPlotlyTickConfigForRange, formatTooltipDate } from '../utils/chartDateFormatting';
+import { getChartRenderConfig, shouldShowChart, createEmptyTimeSeriesPoints, adjustTimezoneForTimeBucket, type TimeSeriesPoint } from '../utils/chartUtils';
 
 export interface TrendsLineChartDataPoint {
   timeBucket: Date;
@@ -24,6 +26,8 @@ export interface TrendsLineChartProps {
   height?: number;
   xDomain?: [number | undefined, number | undefined];
   yDomain?: [number | undefined, number | undefined];
+  leftMargin?: number;
+  yAxisOptions?: Partial<Layout['yaxis']>; // Additional y-axis configuration
 }
 
 export const TrendsLineChart = ({
@@ -31,11 +35,14 @@ export const TrendsLineChart = ({
   yAxisTitle,
   yAxisFormat,
   points,
+  timeBucket = 'hour',
   lineColors = ['#1f77b4'],
   isLoading = false,
   height = 300,
   xDomain,
   yDomain,
+  leftMargin = 60,
+  yAxisOptions,
 }: TrendsLineChartProps) => {
   const { theme } = useDesignSystemTheme();
 
@@ -54,41 +61,66 @@ export const TrendsLineChart = ({
     return Array.from(grouped.entries());
   }, [points]);
 
-  // Create Plotly data traces
-  const plotlyData: Data[] = seriesData.map(([seriesName, seriesPoints], index) => ({
-    type: 'scatter',
-    mode: 'lines+markers',
-    x: seriesPoints.map(p => p.timeBucket),
-    y: seriesPoints.map(p => p.value),
-    name: seriesName === 'default' ? '' : seriesName,
-    line: {
-      color: lineColors[index] || lineColors[0] || '#1f77b4',
-      width: 2,
-    },
-    marker: {
-      size: 6,
-      color: lineColors[index] || lineColors[0] || '#1f77b4',
-    },
-    hovertemplate: `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: %{x}<extra></extra>`,
-  }));
+  // Get smart tick configuration for x-axis
+  const tickConfig = React.useMemo(() => {
+    // Always use xDomain for tick generation when available - this shows x-axis even with no data
+    if (xDomain && xDomain[0] && xDomain[1]) {
+      return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+    }
+    
+    // If no xDomain but have data points, use the data points  
+    if (points.length > 0) {
+      return getPlotlyTickConfig(points, timeBucket);
+    }
+    
+    // No data and no domain - return empty
+    return { ticktext: [], tickvals: [], tickangle: 0 };
+  }, [points, timeBucket, xDomain]);
 
-  // Create Plotly layout
+  // Create Plotly data traces
+  const plotlyData: Data[] = seriesData.map(([seriesName, seriesPoints], index) => {
+    return {
+      type: 'scatter',
+      mode: 'lines+markers',
+      x: seriesPoints.map(p => p.timeBucket),
+      y: seriesPoints.map(p => p.value),
+      name: seriesName === 'default' ? '' : seriesName,
+      line: {
+        color: lineColors[index] || lineColors[0] || '#1f77b4',
+        width: 2,
+      },
+      marker: {
+        size: 6,
+        color: lineColors[index] || lineColors[0] || '#1f77b4',
+      },
+      hovertemplate: seriesPoints.map(p => 
+        `<b>${yAxisTitle}</b>: %{y}<br><b>Date</b>: ${formatTooltipDate(p.timeBucket, timeBucket)}<extra></extra>`
+      )[0], // Use first point's format as template
+    };
+  });
+
+  // Create Plotly layout with smart date formatting
   const layout: Partial<Layout> = {
     ...createThemedPlotlyLayout(theme),
     height,
-    margin: { l: 60, r: 20, t: 20, b: 60 },
+    margin: { l: 0, r: 0, t: 0, b: 0 },
     xaxis: {
-      title: '',
       gridcolor: theme.colors.borderDecorative,
       tickcolor: theme.colors.textPlaceholder,
       range: xDomain,
+      tickmode: 'array',
+      ticktext: tickConfig.ticktext,
+      tickvals: tickConfig.tickvals,
+      tickangle: tickConfig.tickangle,
+      automargin: true,
     },
     yaxis: {
-      title: yAxisTitle,
       gridcolor: theme.colors.borderDecorative,
       tickcolor: theme.colors.textPlaceholder,
       tickformat: yAxisFormat,
       range: yDomain,
+      automargin: true,
+      ...yAxisOptions,
     },
     showlegend: seriesData.length > 1 && seriesData[0][0] !== 'default',
   };
@@ -105,6 +137,7 @@ export const TrendsLineChart = ({
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
+        position: 'relative',
       }}
     >
       {isLoading ? (
@@ -117,11 +150,16 @@ export const TrendsLineChart = ({
           description="Description for when there is no data to show."
         />
       ) : (
-        <LazyPlot
-          data={plotlyData}
-          layout={layout}
-          config={config}
-        />
+        <div css={{ width: '100%', position: 'relative' }}>
+          <LazyPlot
+            key={`${points.length}-${JSON.stringify(yAxisOptions)}-${JSON.stringify(xDomain)}`}
+            data={plotlyData}
+            layout={layout}
+            config={config}
+            style={{ width: '100%' }}
+            useResizeHandler={true}
+          />
+        </div>
       )}
     </div>
   );

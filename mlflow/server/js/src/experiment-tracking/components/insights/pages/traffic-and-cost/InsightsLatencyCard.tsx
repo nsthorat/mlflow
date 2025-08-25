@@ -15,6 +15,7 @@ import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChar
 import { TrendsCardSkeleton } from '../../components/TrendsSkeleton';
 import { PERCENTILE_COLORS } from '../../constants/percentileColors';
 import { NoDataFoundMessage } from '../../components/NoDataFoundMessage';
+import { LatencyValueSelector } from '../../components/LatencyValueSelector';
 
 interface InsightsLatencyCardProps {
   experimentId?: string;
@@ -67,22 +68,59 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
   const hasData = latencyData.summary.p50_latency !== null;
 
   // Transform time series data for chart - show all three percentiles
+  // For daily/weekly buckets, adjust timestamps for proper local display
   const chartData = [
-    ...latencyData.time_series.map(point => ({
-      timeBucket: new Date(point.time_bucket),
-      value: point.p50_latency || 0,
-      seriesName: 'P50',
-    })),
-    ...latencyData.time_series.map(point => ({
-      timeBucket: new Date(point.time_bucket),
-      value: point.p90_latency || 0,
-      seriesName: 'P90',
-    })),
-    ...latencyData.time_series.map(point => ({
-      timeBucket: new Date(point.time_bucket),
-      value: point.p99_latency || 0,
-      seriesName: 'P99',
-    })),
+    ...latencyData.time_series.map(point => {
+      const date = new Date(point.time_bucket);
+      
+      // For day/week buckets, adjust the timestamp to show correct local date
+      if (timeBucket === 'day' || timeBucket === 'week') {
+        // The backend returns UTC midnight, but we want to display local midnight
+        // Add the timezone offset to compensate
+        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+        date.setTime(date.getTime() + offsetMs);
+      }
+      
+      return {
+        timeBucket: date,
+        value: point.p50_latency || 0,
+        seriesName: 'P50',
+      };
+    }),
+    ...latencyData.time_series.map(point => {
+      const date = new Date(point.time_bucket);
+      
+      // For day/week buckets, adjust the timestamp to show correct local date
+      if (timeBucket === 'day' || timeBucket === 'week') {
+        // The backend returns UTC midnight, but we want to display local midnight
+        // Add the timezone offset to compensate
+        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+        date.setTime(date.getTime() + offsetMs);
+      }
+      
+      return {
+        timeBucket: date,
+        value: point.p90_latency || 0,
+        seriesName: 'P90',
+      };
+    }),
+    ...latencyData.time_series.map(point => {
+      const date = new Date(point.time_bucket);
+      
+      // For day/week buckets, adjust the timestamp to show correct local date
+      if (timeBucket === 'day' || timeBucket === 'week') {
+        // The backend returns UTC midnight, but we want to display local midnight
+        // Add the timezone offset to compensate
+        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+        date.setTime(date.getTime() + offsetMs);
+      }
+      
+      return {
+        timeBucket: date,
+        value: point.p99_latency || 0,
+        seriesName: 'P99',
+      };
+    }),
   ];
 
   // Transform correlations for display
@@ -94,95 +132,36 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
     type: 'tag' as const,
   })) || [];
 
-  const formatLatency = (ms: number | null) => {
-    if (ms === null) return 'N/A';
-    if (ms < 1000) return `${ms.toFixed(0)}ms`;
-    return `${(ms / 1000).toFixed(2)}s`;
-  };
 
   return (
     <InsightsCard
-      title="Latency Distribution"
-      subtitle={hasData ? `Median: ${formatLatency(latencyData.summary.p50_latency)}` : undefined}
+      title="Latency"
+      subtitle={
+        hasData ? (
+          <LatencyValueSelector 
+            latencies={{
+              p50: latencyData.summary.p50_latency,
+              p90: latencyData.summary.p90_latency,
+              p99: latencyData.summary.p99_latency,
+            }}
+          />
+        ) : undefined
+      }
     >
       {hasData ? (
         <>
-          {/* Summary Statistics */}
-          <div
-        css={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: theme.spacing.md,
-          marginBottom: theme.spacing.lg,
-          padding: theme.spacing.md,
-          background: theme.colors.backgroundSecondary,
-          borderRadius: theme.general.borderRadiusBase,
-        }}
-      >
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P50 }}>
-            {formatLatency(latencyData.summary.p50_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            P50 (Median)
-          </div>
-        </div>
-        
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P90 }}>
-            {formatLatency(latencyData.summary.p90_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            P90
-          </div>
-        </div>
-        
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: PERCENTILE_COLORS.P99 }}>
-            {formatLatency(latencyData.summary.p99_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            P99
-          </div>
-        </div>
-
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.textPrimary }}>
-            {formatLatency(latencyData.summary.avg_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Average
-          </div>
-        </div>
-
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.textSecondary }}>
-            {formatLatency(latencyData.summary.min_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Min
-          </div>
-        </div>
-
-        <div>
-          <div css={{ fontSize: '20px', fontWeight: 600, color: theme.colors.textSecondary }}>
-            {formatLatency(latencyData.summary.max_latency)}
-          </div>
-          <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-            Max
-          </div>
-        </div>
-      </div>
-
       {/* Time Series Chart */}
-      <div css={{ marginBottom: theme.spacing.lg }}>
+      <div>
         <TrendsLineChart
           points={chartData}
-          yAxisTitle="Latency (ms)"
+          yAxisTitle=""
+          yAxisFormat=".0f ms"
           title="Latency Percentiles Over Time"
+          timeBucket={timeBucket}
           height={250}
           xDomain={xDomain}
           lineColors={[PERCENTILE_COLORS.P50, PERCENTILE_COLORS.P90, PERCENTILE_COLORS.P99]}
+          showLegend={false}
         />
       </div>
 

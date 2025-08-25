@@ -59,84 +59,59 @@ export const InsightsVolumeCard = ({ experimentId }: InsightsVolumeCardProps) =>
   const hasData = volumeData.summary.count > 0;
 
   // Transform time series data for chart
-  const chartData = volumeData.time_series.map(point => ({
-    timeBucket: new Date(point.time_bucket),
-    value: point.count,
-    successful: point.ok_count,
-    errors: point.error_count,
-  }));
+  // For daily/weekly buckets, the backend returns UTC timestamps that represent
+  // local timezone boundaries. We need to adjust them for proper display.
+  const chartData = volumeData.time_series.map(point => {
+    const date = new Date(point.time_bucket);
+    
+    // For day/week buckets, adjust the timestamp to show correct local date
+    if (timeBucket === 'day' || timeBucket === 'week') {
+      // The backend returns UTC midnight, but we want to display local midnight
+      // Add the timezone offset to compensate
+      const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+      date.setTime(date.getTime() + offsetMs);
+    }
+    
+    return {
+      timeBucket: date,
+      value: point.count,
+      successful: point.ok_count,
+      errors: point.error_count,
+    };
+  });
 
   return (
     <InsightsCard
-      title="Volume Over Time"
-      subtitle={hasData ? `${volumeData.summary.count} total traces` : undefined}
+      title="Traffic"
+      subtitle={
+        hasData ? (
+          <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
+            {volumeData.summary.count.toLocaleString()} traces
+          </div>
+        ) : undefined
+      }
     >
-      {hasData ? (
-        <>
-          {/* Summary Statistics */}
-          <div
-            css={{
-              display: 'flex',
-              gap: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-              padding: theme.spacing.md,
-              background: theme.colors.backgroundSecondary,
-              borderRadius: theme.general.borderRadiusBase,
-            }}
-          >
-            <div css={{ flex: 1 }}>
-              <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.textValidationSuccess }}>
-                {volumeData.summary.ok_count.toLocaleString()}
-              </div>
-              <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-                Successful Traces
-              </div>
-            </div>
-            
-            <div css={{ flex: 1 }}>
-              <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.textValidationDanger }}>
-                {volumeData.summary.error_count.toLocaleString()}
-              </div>
-              <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-                Error Traces
-              </div>
-            </div>
-            
-            <div css={{ flex: 1 }}>
-              <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.textPrimary }}>
-                {volumeData.summary.count.toLocaleString()}
-              </div>
-              <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-                Total Traces
-              </div>
-            </div>
-
-            <div css={{ flex: 1 }}>
-              <div css={{ fontSize: '24px', fontWeight: 600, color: theme.colors.actionDangerPrimaryBackgroundDefault }}>
-                {volumeData.summary.error_count > 0 
-                  ? ((volumeData.summary.error_count / volumeData.summary.count) * 100).toFixed(1) 
-                  : '0.0'}%
-              </div>
-              <div css={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-                Error Rate
-              </div>
-            </div>
-          </div>
-
-          {/* Time Series Chart */}
-          <div css={{ marginBottom: theme.spacing.lg }}>
-            <TrendsLineChart
-              points={chartData}
-              yAxisTitle="Trace Count"
-              title="Volume Over Time"
-              height={300}
-              xDomain={xDomain}
-              yAxisFormat="d"
-            />
-          </div>
-        </>
-      ) : (
-        <NoDataFoundMessage />
+      {/* Always show the chart - it will display x-axis labels even with no data when xDomain is provided */}
+      <div>
+        <TrendsLineChart
+          points={chartData}
+          yAxisTitle="Trace Count"
+          title="Volume Over Time"
+          timeBucket={timeBucket}
+          height={200}
+          xDomain={xDomain}
+          yAxisFormat="d"
+          yDomain={[0, undefined]}
+          leftMargin={30}
+          yAxisOptions={{ rangemode: 'tozero' }}
+        />
+      </div>
+      
+      {/* Show "no data" message below the chart when there's no data */}
+      {!hasData && (
+        <div css={{ marginTop: theme.spacing.md }}>
+          <NoDataFoundMessage minHeight={100} />
+        </div>
       )}
     </InsightsCard>
   );
