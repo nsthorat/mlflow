@@ -13,6 +13,7 @@ from mlflow.store.tracking.dbmodels.models import (
     SqlTraceInfo,
     SqlTraceTag,
     SqlExperiment,
+    SqlSpan,
 )
 from pydantic import BaseModel
 from typing import Union
@@ -211,10 +212,10 @@ def get_tool_volume_over_time(
     timezone: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Get tool call volume over time with time bucketing.
+    Get tool call volume over time with time bucketing and zero-filling for missing periods using SQLAlchemy.
     """
     def volume_query(session):
-        from sqlalchemy import text
+        from sqlalchemy import func, text, and_, select, literal_column
         
         # Calculate timezone offset
         offset_ms = 0
@@ -229,61 +230,106 @@ def get_tool_volume_over_time(
             except:
                 offset_ms = 0
         
-        # Build WHERE conditions
-        where_conditions = []
-        params = {}
+        # Build WHERE conditions using SQLAlchemy
+        from mlflow.store.tracking.dbmodels.models import SqlTraceInfo, SqlSpan
+        
+        filters = [SqlSpan.type == 'TOOL']
         
         if experiment_ids:
             experiment_id = experiment_ids[0]
-            where_conditions.append("ti.experiment_id = :experiment_id")
-            params["experiment_id"] = experiment_id
+            filters.append(SqlTraceInfo.experiment_id == experiment_id)
             
         if tool_names:
-            tool_names_str = "', '".join(tool_names)
-            where_conditions.append(f"s.name IN ('{tool_names_str}')")
+            filters.append(SqlSpan.name.in_(tool_names))
             
         if start_time:
-            where_conditions.append("ti.timestamp_ms >= :start_time")
-            params["start_time"] = start_time
+            filters.append(SqlTraceInfo.timestamp_ms >= start_time)
         if end_time:
-            where_conditions.append("ti.timestamp_ms <= :end_time")
-            params["end_time"] = end_time
-        
-        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            filters.append(SqlTraceInfo.timestamp_ms <= end_time)
         
         # Build time bucket expression
         if time_bucket == "hour":
-            bucket_expr = "(ti.timestamp_ms / 3600000) * 3600000"
+            bucket_expr = func.cast((SqlTraceInfo.timestamp_ms / 3600000), Integer) * 3600000
+            interval_ms = 3600000  # 1 hour in ms
         elif time_bucket == "day":
-            bucket_expr = f"((ti.timestamp_ms + {offset_ms}) / 86400000) * 86400000 - {offset_ms}"
+            bucket_expr = func.cast(((SqlTraceInfo.timestamp_ms + offset_ms) / 86400000), Integer) * 86400000 - offset_ms
+            interval_ms = 86400000  # 1 day in ms
         elif time_bucket == "week":
-            bucket_expr = f"((ti.timestamp_ms + {offset_ms}) / 604800000) * 604800000 - {offset_ms}"
+            bucket_expr = func.cast(((SqlTraceInfo.timestamp_ms + offset_ms) / 604800000), Integer) * 604800000 - offset_ms
+            interval_ms = 604800000  # 1 week in ms
         else:
-            bucket_expr = "(ti.timestamp_ms / 3600000) * 3600000"  # Default to hour
+            bucket_expr = func.cast((SqlTraceInfo.timestamp_ms / 3600000), Integer) * 3600000  # Default to hour
+            interval_ms = 3600000
         
-        # Query for tool volume over time
-        query = text(f"""
-            SELECT 
-                s.name as tool_name,
-                {bucket_expr} as time_bucket,
-                COUNT(s.span_id) as count
-            FROM spans s
-            JOIN trace_info ti ON s.trace_id = ti.request_id
-            WHERE s.type = 'TOOL' AND {where_clause}
-            GROUP BY s.name, {bucket_expr}
-            ORDER BY s.name, time_bucket
-        """)
+        # Get min and max timestamps for the time range to densify
+        bounds_query = (
+            session.query(
+                func.min(bucket_expr).label('min_bucket'),
+                func.max(bucket_expr).label('max_bucket')
+            )
+            .select_from(SqlSpan)
+            .join(SqlTraceInfo, SqlSpan.trace_id == SqlTraceInfo.request_id)
+            .filter(and_(*filters))
+        )
         
-        results = session.execute(query, params).fetchall()
+        bounds_result = bounds_query.first()
+        if not bounds_result or bounds_result.min_bucket is None:
+            return []
         
-        return [
-            {
-                'tool_name': row.tool_name,
-                'time_bucket': int(row.time_bucket),
-                'count': row.count
-            }
-            for row in results
-        ]
+        min_bucket = int(bounds_result.min_bucket)
+        max_bucket = int(bounds_result.max_bucket)
+        
+        # Generate complete time series using Python instead of SQL CTE for better compatibility
+        time_buckets = []
+        current_bucket = min_bucket
+        while current_bucket <= max_bucket:
+            time_buckets.append(current_bucket)
+            current_bucket += interval_ms
+        
+        # Get actual data grouped by tool and time bucket
+        actual_data_query = (
+            session.query(
+                SqlSpan.name.label('tool_name'),
+                bucket_expr.label('time_bucket'),
+                func.count(SqlSpan.span_id).label('count')
+            )
+            .select_from(SqlSpan)
+            .join(SqlTraceInfo, SqlSpan.trace_id == SqlTraceInfo.request_id)
+            .filter(and_(*filters))
+            .group_by(SqlSpan.name, bucket_expr)
+            .order_by(SqlSpan.name, bucket_expr)
+        )
+        
+        actual_results = actual_data_query.all()
+        
+        # Get distinct tool names
+        tool_names_query = (
+            session.query(SqlSpan.name.distinct().label('tool_name'))
+            .select_from(SqlSpan)
+            .join(SqlTraceInfo, SqlSpan.trace_id == SqlTraceInfo.request_id)
+            .filter(and_(*filters))
+        )
+        
+        distinct_tool_names = [row.tool_name for row in tool_names_query.all()]
+        
+        # Convert actual data to lookup dictionary
+        actual_data_dict = {}
+        for row in actual_results:
+            key = (row.tool_name, int(row.time_bucket))
+            actual_data_dict[key] = row.count
+        
+        # Generate complete results with zero-filling
+        results = []
+        for tool_name in distinct_tool_names:
+            for bucket in time_buckets:
+                count = actual_data_dict.get((tool_name, bucket), 0)
+                results.append({
+                    'tool_name': tool_name,
+                    'time_bucket': bucket,
+                    'count': count
+                })
+        
+        return results
     
     return store.execute_query(volume_query)
 
@@ -581,53 +627,87 @@ def get_overall_tool_metrics_data(store: SqlAlchemyStore, experiment_ids: List[s
 
 
 def get_overall_tool_volume_over_time(store: SqlAlchemyStore, experiment_ids: List[str], start_time=None, end_time=None, time_bucket="hour"):
-    """Get overall tool volume over time across all tools."""
+    """Get overall tool volume over time across all tools with zero-filling for missing periods using SQLAlchemy."""
     def volume_query(session):
+        from sqlalchemy import func, and_
+        from mlflow.store.tracking.dbmodels.models import SqlTraceInfo, SqlSpan
         
-        # Build where clause for experiments
-        exp_placeholders = ','.join(['?' for _ in experiment_ids])
-        where_clause = f"ti.experiment_id IN ({exp_placeholders})"
-        params = list(experiment_ids)
+        # Build WHERE conditions using SQLAlchemy
+        filters = [SqlSpan.type == 'TOOL']
         
-        # Add time filters
+        if experiment_ids:
+            filters.append(SqlTraceInfo.experiment_id.in_(experiment_ids))
+            
         if start_time:
-            where_clause += " AND ti.timestamp_ms >= ?"
-            params.append(start_time)
+            filters.append(SqlTraceInfo.timestamp_ms >= start_time)
         if end_time:
-            where_clause += " AND ti.timestamp_ms <= ?"
-            params.append(end_time)
+            filters.append(SqlTraceInfo.timestamp_ms <= end_time)
         
-        # Get bucket expression based on time_bucket
+        # Get bucket expression and interval based on time_bucket
+        offset_ms = 0  # No timezone offset for now
         if time_bucket == "day":
-            offset_ms = 0  # No timezone offset for now
-            bucket_expr = f"((ti.timestamp_ms + {offset_ms}) / 86400000) * 86400000 - {offset_ms}"
+            bucket_expr = func.cast(((SqlTraceInfo.timestamp_ms + offset_ms) / 86400000), Integer) * 86400000 - offset_ms
+            interval_ms = 86400000  # 1 day in ms
         elif time_bucket == "week":
-            offset_ms = 0  # No timezone offset for now
-            bucket_expr = f"((ti.timestamp_ms + {offset_ms}) / 604800000) * 604800000 - {offset_ms}"
+            bucket_expr = func.cast(((SqlTraceInfo.timestamp_ms + offset_ms) / 604800000), Integer) * 604800000 - offset_ms
+            interval_ms = 604800000  # 1 week in ms
         else:
-            bucket_expr = "(ti.timestamp_ms / 3600000) * 3600000"
+            bucket_expr = func.cast((SqlTraceInfo.timestamp_ms / 3600000), Integer) * 3600000
+            interval_ms = 3600000  # 1 hour in ms
         
-        # Query for overall tool volume
-        query = text(f"""
-            SELECT 
-                {bucket_expr} as time_bucket,
-                COUNT(s.span_id) as count
-            FROM spans s
-            JOIN trace_info ti ON s.trace_id = ti.request_id
-            WHERE s.type = 'TOOL' AND {where_clause}
-            GROUP BY {bucket_expr}
-            ORDER BY time_bucket
-        """)
+        # Get min and max timestamps for the time range to densify
+        bounds_query = (
+            session.query(
+                func.min(bucket_expr).label('min_bucket'),
+                func.max(bucket_expr).label('max_bucket')
+            )
+            .select_from(SqlSpan)
+            .join(SqlTraceInfo, SqlSpan.trace_id == SqlTraceInfo.request_id)
+            .filter(and_(*filters))
+        )
         
-        results = session.execute(query, params).fetchall()
+        bounds_result = bounds_query.first()
+        if not bounds_result or bounds_result.min_bucket is None:
+            return []
         
-        return [
-            {
-                'time_bucket': int(row.time_bucket),
-                'count': row.count
-            }
-            for row in results
-        ]
+        min_bucket = int(bounds_result.min_bucket)
+        max_bucket = int(bounds_result.max_bucket)
+        
+        # Generate complete time series using Python
+        time_buckets = []
+        current_bucket = min_bucket
+        while current_bucket <= max_bucket:
+            time_buckets.append(current_bucket)
+            current_bucket += interval_ms
+        
+        # Get actual data grouped by time bucket
+        actual_data_query = (
+            session.query(
+                bucket_expr.label('time_bucket'),
+                func.count(SqlSpan.span_id).label('count')
+            )
+            .select_from(SqlSpan)
+            .join(SqlTraceInfo, SqlSpan.trace_id == SqlTraceInfo.request_id)
+            .filter(and_(*filters))
+            .group_by(bucket_expr)
+            .order_by(bucket_expr)
+        )
+        
+        actual_results = actual_data_query.all()
+        
+        # Convert actual data to lookup dictionary
+        actual_data_dict = {int(row.time_bucket): row.count for row in actual_results}
+        
+        # Generate complete results with zero-filling
+        results = []
+        for bucket in time_buckets:
+            count = actual_data_dict.get(bucket, 0)
+            results.append({
+                'time_bucket': bucket,
+                'count': count
+            })
+        
+        return results
     
     return store.execute_query(volume_query)
 

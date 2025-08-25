@@ -85,6 +85,7 @@ export const TrendsLineChart = ({
       x: seriesPoints.map(p => p.timeBucket),
       y: seriesPoints.map(p => p.value),
       name: seriesName === 'default' ? '' : seriesName,
+      connectgaps: false, // Don't connect lines across missing data points
       line: {
         color: lineColors[index] || lineColors[0] || '#1f77b4',
         width: 2,
@@ -103,6 +104,7 @@ export const TrendsLineChart = ({
   const layout: Partial<Layout> = {
     ...createThemedPlotlyLayout(theme),
     height,
+    autosize: true,
     margin: { l: 0, r: 0, t: 0, b: 0 },
     xaxis: {
       gridcolor: theme.colors.borderDecorative,
