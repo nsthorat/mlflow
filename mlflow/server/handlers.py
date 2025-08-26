@@ -185,6 +185,10 @@ class TrackingStoreRegistryWrapper(TrackingStoreRegistry):
         super().__init__()
         self.register("", self._get_file_store)
         self.register("file", self._get_file_store)
+        # Add databricks support
+        self.register("databricks", self._get_databricks_rest_store)
+        self.register("databricks-uc", self._get_databricks_uc_rest_store)
+        self.register("uc", self._get_databricks_uc_rest_store)
         for scheme in DATABASE_ENGINES:
             self.register(scheme, self._get_sqlalchemy_store)
         self.register_entrypoints()
@@ -194,6 +198,21 @@ class TrackingStoreRegistryWrapper(TrackingStoreRegistry):
         from mlflow.store.tracking.file_store import FileStore
 
         return FileStore(store_uri, artifact_uri)
+    
+    @classmethod
+    def _get_databricks_rest_store(cls, store_uri, **_):
+        from functools import partial
+        from mlflow.store.tracking.rest_store import RestStore
+        from mlflow.utils.databricks_utils import get_databricks_host_creds
+        return RestStore(partial(get_databricks_host_creds, store_uri))
+    
+    @classmethod
+    def _get_databricks_uc_rest_store(cls, store_uri, **_):
+        from functools import partial
+        from mlflow.store.tracking.rest_store import RestStore
+        from mlflow.utils.databricks_utils import get_databricks_host_creds
+        # For databricks-uc, we still use RestStore with databricks creds
+        return RestStore(partial(get_databricks_host_creds, store_uri))
 
     @classmethod
     def _get_sqlalchemy_store(cls, store_uri, artifact_uri):
