@@ -102,7 +102,7 @@ export function createEmptyTimeSeriesPoints(
   const startDate = new Date(startTime);
   const endDate = new Date(endTime);
   
-  if (timeBucket === 'hour') {
+  if (timeBucket === 'HOUR') {
     // Create hourly points
     const current = new Date(startDate);
     current.setMinutes(0, 0, 0); // Round to hour
@@ -114,7 +114,7 @@ export function createEmptyTimeSeriesPoints(
       });
       current.setHours(current.getHours() + 1);
     }
-  } else if (timeBucket === 'day') {
+  } else if (timeBucket === 'DAY') {
     // Create daily points
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0); // Round to day
@@ -126,7 +126,7 @@ export function createEmptyTimeSeriesPoints(
       });
       current.setDate(current.getDate() + 1);
     }
-  } else if (timeBucket === 'week') {
+  } else if (timeBucket === 'WEEK') {
     // Create weekly points
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
