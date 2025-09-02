@@ -522,7 +522,7 @@ service MlflowService {
     option (rpc) = {
       endpoints: [{
         method: "POST",
-        path: "mlflow/experiments/search-datasets"
+        path: "/mlflow/experiments/search-datasets"
         since { major: 2, minor: 0 },
       }],
       visibility: PUBLIC_UNDOCUMENTED,

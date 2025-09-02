@@ -131,9 +131,13 @@ class RestException(MlflowException):
             try:
                 # The `error_code` can be an http error code, in which case we convert it to the
                 # corresponding `ErrorCode`.
-                error_code = HTTP_STATUS_TO_ERROR_CODE[int(error_code)]
-                super().__init__(message, error_code=ErrorCode.Value(error_code))
-            except ValueError or KeyError:
+                if error_code is not None:
+                    error_code = HTTP_STATUS_TO_ERROR_CODE[int(error_code)]
+                    super().__init__(message, error_code=ErrorCode.Value(error_code))
+                else:
+                    # If error_code is None, treat it as a generic error
+                    super().__init__(message)
+            except (ValueError, KeyError):
                 _logger.warning(
                     f"Received error code not recognized by MLflow: {error_code}, this may "
                     "indicate your request encountered an error before reaching MLflow server, "

@@ -163,6 +163,7 @@ from mlflow.protos.webhooks_pb2 import (
     WebhookService,
 )
 from mlflow.server.validation import _validate_content_type
+from mlflow.store._unity_catalog.registry.rest_store import UcModelRegistryStore
 from mlflow.store.artifact.artifact_repo import MultipartUploadMixin
 from mlflow.store.artifact.artifact_repository_registry import get_artifact_repository
 from mlflow.store.db.db_types import DATABASE_ENGINES
@@ -1494,6 +1495,9 @@ def search_datasets_handler():
         SearchDatasets(),
     )
     response_message = search_datasets_impl(request_message)
+    # If it's already a Flask Response (from _not_implemented), return it directly
+    if isinstance(response_message, Response):
+        return response_message
     response = Response(mimetype="application/json")
     response.set_data(message_to_json(response_message))
     return response
@@ -1929,12 +1933,22 @@ def _search_registered_models():
         },
     )
     store = _get_model_registry_store()
-    registered_models = store.search_registered_models(
-        filter_string=request_message.filter,
-        max_results=request_message.max_results,
-        order_by=request_message.order_by,
-        page_token=request_message.page_token or None,
-    )
+
+    # Unity Catalog doesn't support filter_string and order_by parameters
+    if isinstance(store, UcModelRegistryStore):
+        registered_models = store.search_registered_models(
+            filter_string=None,
+            max_results=request_message.max_results,
+            order_by=None,
+            page_token=request_message.page_token or None,
+        )
+    else:
+        registered_models = store.search_registered_models(
+            filter_string=request_message.filter,
+            max_results=request_message.max_results,
+            order_by=request_message.order_by,
+            page_token=request_message.page_token or None,
+        )
     response_message = SearchRegisteredModels.Response()
     response_message.registered_models.extend([e.to_proto() for e in registered_models])
     if registered_models.token:

@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import urllib.parse
 from typing import Any
 
 from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
@@ -20,6 +21,7 @@ from mlflow.entities import (
     RunInfo,
     ScorerVersion,
     ViewType,
+    _DatasetSummary,
 )
 from mlflow.entities.assessment import Assessment, Expectation, Feedback
 from mlflow.entities.span import Span
@@ -1391,3 +1393,53 @@ class RestStore(AbstractStore):
             MlflowException: If spans belong to different traces or the OTel API call fails.
         """
         return self.log_spans(experiment_id, spans)
+
+    def _search_datasets(self, experiment_ids):
+        """
+        Return all dataset summaries associated to the given experiments.
+
+        Args:
+            experiment_ids: List of experiment ids to scope the search
+
+        Returns:
+            A List of :py:class:`_DatasetSummary` entities.
+        """
+        # For Databricks, use the managed-evals/datasets endpoint
+        # This is a GET request with query parameters
+        from mlflow.protos.service_pb2 import DatasetSummary as ProtoDatasetSummary
+
+        summaries = []
+        for experiment_id in experiment_ids:
+            try:
+                params = {"filter": f"experiment_id={experiment_id}", "page_size": "500"}
+                query_string = urllib.parse.urlencode(params)
+                endpoint = f"/api/2.0/managed-evals/datasets?{query_string}"
+
+                # Make GET request
+                response = http_request(
+                    host_creds=self.get_host_creds(),
+                    endpoint=endpoint,
+                    method="GET",
+                )
+                response = verify_rest_response(response, endpoint)
+
+                # Parse the response
+                response_json = json.loads(response.text)
+
+                # Convert to DatasetSummary objects
+                for item in response_json.get("datasets", []):
+                    proto_summary = ProtoDatasetSummary()
+                    # Use the experiment_id from our query since Databricks doesn't return it
+                    proto_summary.experiment_id = experiment_id
+                    proto_summary.name = item.get("name", "")
+                    proto_summary.digest = item.get("digest", "")
+                    # Map additional Databricks fields to context if available
+                    if "context" in item:
+                        proto_summary.context = item["context"]
+                    summaries.append(_DatasetSummary.from_proto(proto_summary))
+            except Exception:
+                # If the endpoint is not available, continue with empty results
+                # This happens when the Databricks instance doesn't support this API
+                continue
+
+        return summaries
