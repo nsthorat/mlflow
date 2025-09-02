@@ -3,9 +3,41 @@ Databricks SQL Store implementation that extends RestStore for trace searches.
 
 This store uses direct Databricks SQL queries for search_traces while delegating
 all other operations to the parent RestStore.
+
+Trace Table Schema:
+- trace_id: string
+- client_request_id: string  
+- request_time: timestamp
+- state: string (OK, ERROR, etc.)
+- execution_duration_ms: bigint
+- request: string
+- response: string
+- trace_metadata: map<string,string>
+- tags: map<string,string>
+- trace_location: struct
+- assessments: array<struct>
+  - assessment_id: string
+  - trace_id: string
+  - name: string (e.g., 'relevance_to_query')
+  - source: struct
+    - source_id: string (e.g., 'databricks')
+    - source_type: string (e.g., 'LLM_JUDGE')
+  - create_time: timestamp
+  - last_update_time: timestamp
+  - expectation: string (nullable)
+  - feedback: struct
+    - value: string (e.g., '"yes"' or '"no"')
+    - error: string (nullable)
+  - rationale: string
+  - metadata: map<string,string> (nullable)
+  - span_id: string
+- spans: array<struct>
+- request_preview: string
+- response_preview: string
 """
 
 import json
+import logging
 from functools import lru_cache, partial
 from typing import Optional
 
@@ -21,6 +53,8 @@ from mlflow.store.tracking.rest_store import RestStore
 from mlflow.tracing.analysis import TraceFilterCorrelationResult
 from mlflow.utils.databricks_sql_filter import TraceFilterParser
 from mlflow.utils.databricks_utils import get_databricks_host_creds
+
+_logger = logging.getLogger(__name__)
 
 
 class DatabricksSqlStore(RestStore):
@@ -45,6 +79,20 @@ class DatabricksSqlStore(RestStore):
         # Initialize parent RestStore with Databricks host credentials
         super().__init__(partial(get_databricks_host_creds, store_uri))
         self._spark_session = None
+    
+    def __del__(self):
+        """Close Spark session when store is deleted."""
+        self.close_spark_session()
+    
+    def close_spark_session(self):
+        """Close the Spark session if it exists."""
+        if self._spark_session:
+            try:
+                self._spark_session.stop()
+            except:
+                pass
+            finally:
+                self._spark_session = None
 
     def _get_or_create_spark_session(self):
         """
@@ -53,16 +101,75 @@ class DatabricksSqlStore(RestStore):
         Returns:
             A DatabricksSession configured for serverless compute.
         """
-        if self._spark_session is None:
-            try:
-                # Use environment variables for configuration
-                # These should be set by the caller
-                self._spark_session = DatabricksSession.builder.serverless(True).getOrCreate()
-            except Exception as e:
-                raise MlflowException(
-                    f"Failed to create Databricks session: {e}", error_code=INVALID_PARAMETER_VALUE
-                )
+        if self._spark_session is None or not self._is_spark_session_healthy():
+            self._create_new_spark_session()
         return self._spark_session
+    
+    def _is_spark_session_healthy(self):
+        """
+        Check if the current Spark session is healthy by running a simple query.
+        
+        Returns:
+            bool: True if the session is healthy, False otherwise
+        """
+        if self._spark_session is None:
+            return False
+        
+        try:
+            # Simple health check query
+            self._spark_session.sql("SELECT 1").collect()
+            return True
+        except Exception as e:
+            _logger.warning(f"Spark session health check failed: {e}")
+            return False
+    
+    def _create_new_spark_session(self):
+        """
+        Create a new Spark session, cleaning up the old one if it exists.
+        """
+        # Clean up existing session
+        if self._spark_session is not None:
+            try:
+                self._spark_session.stop()
+            except Exception as e:
+                _logger.warning(f"Error stopping previous Spark session: {e}")
+            finally:
+                self._spark_session = None
+        
+        try:
+            # Use environment variables for configuration
+            # These should be set by the caller
+            self._spark_session = DatabricksSession.builder.serverless(True).getOrCreate()
+            _logger.info("Created new Databricks Spark session")
+        except Exception as e:
+            raise MlflowException(
+                f"Failed to create Databricks session: {e}", error_code=INVALID_PARAMETER_VALUE
+            )
+    
+    def restart_spark_session(self):
+        """
+        Restart the Spark session by stopping the current one and creating a new one.
+        This method can be called when the session becomes stale or encounters errors.
+        """
+        _logger.info("Restarting Spark session")
+        self._create_new_spark_session()
+    
+    def execute_sql(self, query: str, params: Optional[dict] = None):
+        """
+        Execute a SQL query and return results.
+        
+        Args:
+            query: SQL query to execute
+            params: Optional parameters for the query
+            
+        Returns:
+            List of Row objects with results
+        """
+        spark = self._get_or_create_spark_session()
+        if params:
+            return spark.sql(query, params).collect()
+        else:
+            return spark.sql(query).collect()
 
     def _parse_filter_string(self, filter_string: str, table_name: str, params: dict) -> list[str]:
         """
@@ -165,6 +272,8 @@ class DatabricksSqlStore(RestStore):
                 headers["Authorization"] = f"Bearer {host_creds.token}"
 
             request_body = json.dumps({"experiment_id": experiment_id})
+            
+            _logger.info(f"Calling GetMonitor API for experiment {experiment_id}: {url}")
 
             # Make the API call
             resp = requests.post(
@@ -174,17 +283,21 @@ class DatabricksSqlStore(RestStore):
                 verify=not getattr(host_creds, "ignore_tls_verification", False),
             )
 
+            _logger.info(f"GetMonitor API response status: {resp.status_code}")
             if resp.status_code != 200:
+                _logger.warning(f"GetMonitor API failed with status {resp.status_code}: {resp.text}")
                 # API call failed, return None to fall back to default behavior
                 return None
 
             response_json = resp.json()
+            _logger.info(f"GetMonitor API response: {response_json}")
 
             # Extract trace_archive_table from response
             monitor_infos = response_json.get("monitor_infos", [])
             if monitor_infos and len(monitor_infos) > 0:
                 monitor = monitor_infos[0].get("monitor", {})
                 trace_table = monitor.get("trace_archive_table")
+                _logger.info(f"Found trace_archive_table: {trace_table}")
 
                 if trace_table:
                     # Remove backticks from table name if present

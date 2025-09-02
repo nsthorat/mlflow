@@ -90,26 +90,16 @@ export const truncateDate = (date: Date, timeBucket: TimeBucket): Date => {
   const truncated = new Date(date);
 
   switch (timeBucket) {
-    case 'MONTH':
-      truncated.setUTCDate(1);
-      truncated.setUTCHours(0, 0, 0, 0);
-      break;
-    case 'WEEK':
+    case 'week':
       const dayOfWeek = truncated.getUTCDay();
       truncated.setUTCDate(truncated.getUTCDate() - dayOfWeek);
       truncated.setUTCHours(0, 0, 0, 0);
       break;
-    case 'DAY':
+    case 'day':
       truncated.setUTCHours(0, 0, 0, 0);
       break;
-    case 'HOUR':
+    case 'hour':
       truncated.setUTCMinutes(0, 0, 0);
-      break;
-    case 'MINUTE':
-      truncated.setUTCSeconds(0, 0);
-      break;
-    case 'SECOND':
-      truncated.setUTCMilliseconds(0);
       break;
   }
 

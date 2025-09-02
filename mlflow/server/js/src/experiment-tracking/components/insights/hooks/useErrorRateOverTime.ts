@@ -22,7 +22,7 @@ export interface ErrorRateOverTimeResponse {
 export const useErrorRateOverTime = (
   experimentId: string | undefined,
   timeRange?: { start?: number; end?: number },
-  timeBucket: string = 'hour'
+  timeBucket = 'hour'
 ) => {
   const queryKey = ['insights', 'error-rate', experimentId, timeRange, timeBucket];
   

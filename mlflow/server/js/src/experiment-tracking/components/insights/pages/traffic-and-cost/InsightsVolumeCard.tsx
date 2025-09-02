@@ -59,26 +59,13 @@ export const InsightsVolumeCard = ({ experimentId }: InsightsVolumeCardProps) =>
   const hasData = volumeData.summary.count > 0;
 
   // Transform time series data for chart
-  // For daily/weekly buckets, the backend returns UTC timestamps that represent
-  // local timezone boundaries. We need to adjust them for proper display.
-  const chartData = volumeData.time_series.map(point => {
-    const date = new Date(point.time_bucket);
-    
-    // For day/week buckets, adjust the timestamp to show correct local date
-    if (timeBucket === 'day' || timeBucket === 'week') {
-      // The backend returns UTC midnight, but we want to display local midnight
-      // Add the timezone offset to compensate
-      const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-      date.setTime(date.getTime() + offsetMs);
-    }
-    
-    return {
-      timeBucket: date,
-      value: point.count,
-      successful: point.ok_count,
-      errors: point.error_count,
-    };
-  });
+  // Server now returns timezone-aligned timestamps, no adjustment needed
+  const chartData = volumeData.time_series.map(point => ({
+    timeBucket: new Date(point.time_bucket),
+    value: point.count,
+    successful: point.ok_count,
+    errors: point.error_count,
+  }));
 
   return (
     <InsightsCard

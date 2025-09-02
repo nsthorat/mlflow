@@ -66,23 +66,11 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
 
   // Transform time series data for chart
   // Backend already provides error_rate as percentage (0-100), so divide by 100 for decimal format
-  // For daily/weekly buckets, adjust timestamps for proper local display
-  const chartData = errorData.time_series.map(point => {
-    const date = new Date(point.time_bucket);
-    
-    // For day/week buckets, adjust the timestamp to show correct local date
-    if (timeBucket === 'day' || timeBucket === 'week') {
-      // The backend returns UTC midnight, but we want to display local midnight
-      // Add the timezone offset to compensate
-      const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-      date.setTime(date.getTime() + offsetMs);
-    }
-    
-    return {
-      timeBucket: date,
-      value: point.error_rate / 100, // Convert percentage to decimal for .1% format
-    };
-  });
+  // Server now returns timezone-aligned timestamps, no adjustment needed
+  const chartData = errorData.time_series.map(point => ({
+    timeBucket: new Date(point.time_bucket),
+    value: point.error_rate / 100, // Convert percentage to decimal for .1% format
+  }));
 
   // Transform correlations for display
   const correlations = correlationsData?.data.map(item => ({
@@ -128,7 +116,9 @@ export const InsightsErrorRateCard = ({ experimentId }: InsightsErrorRateCardPro
           lineColors={[theme.colors.textValidationDanger]}
           height={250}
           xDomain={xDomain}
-          yDomain={[0, 1]}
+          yAxisOptions={{
+            rangemode: 'tozero', // Always include zero but auto-scale the maximum
+          }}
         />
       </div>
 

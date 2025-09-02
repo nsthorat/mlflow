@@ -14,7 +14,7 @@ export type InsightsTimeRange =
   | 'ALL'
   | 'CUSTOM';
 
-export const DEFAULT_INSIGHTS_TIME_RANGE: InsightsTimeRange = 'ALL';
+export const DEFAULT_INSIGHTS_TIME_RANGE: InsightsTimeRange = 'LAST_7_DAYS';
 
 export interface InsightsTimeRangeFilters {
   timeRange?: InsightsTimeRange;

@@ -39,25 +39,64 @@ This uses `uv` (fast Python package manager) to automatically manage dependencie
 
 To run the MLflow dev server that proxies requests to a Databricks workspace:
 
+#### Method 1: Using uvicorn directly (Recommended if dev/run-dev-server.sh fails)
 ```bash
-# IMPORTANT: All four environment variables below are REQUIRED for proper Databricks backend operation
-# Set them in this exact order:
-export DATABRICKS_HOST="https://your-workspace.databricks.com"  # Your Databricks workspace URL
-export DATABRICKS_TOKEN="your-databricks-token"                # Your Databricks personal access token
-export MLFLOW_TRACKING_URI="databricks"                        # Must be set to "databricks"
-export MLFLOW_REGISTRY_URI="databricks-uc"                     # Use "databricks-uc" for Unity Catalog, or "databricks" for workspace model registry
+# Kill any existing servers first
+pkill -f "uvicorn" || true; pkill -f "yarn" || true
 
-# Start the dev server with these environment variables
+# Start backend with uvicorn directly (bypasses mlflow server CLI issues)
+DATABRICKS_HOST=https://your-databricks-workspace.cloud.databricks.com \
+DATABRICKS_TOKEN=<your-databricks-token> \
+MLFLOW_TRACKING_URI=databricks \
+MLFLOW_REGISTRY_URI=databricks-uc \
+MLFLOW_EXPERIMENT_ID=<your-experiment-id> \
+nohup uv run -m uvicorn --reload --log-level info --host 127.0.0.1 --port 5000 mlflow.server.fastapi_app:app > /tmp/mlflow-backend.log 2>&1 &
+
+# Start frontend separately
+cd mlflow/server/js && nohup yarn start > /tmp/yarn-frontend.log 2>&1 &
+
+# Monitor the logs
+tail -f /tmp/mlflow-backend.log
+```
+
+#### Method 2: Using dev/run-dev-server.sh (if it works with your setup)
+```bash
+# Kill any existing servers first
+pkill -f "mlflow server" || true; pkill -f "yarn start" || true
+
+# Start with Databricks configuration (MUST use these exact environment variables)
+DATABRICKS_HOST=https://your-databricks-workspace.cloud.databricks.com \
+DATABRICKS_TOKEN=<your-databricks-token> \
+MLFLOW_TRACKING_URI=databricks \
+MLFLOW_REGISTRY_URI="databricks-uc" \
+MLFLOW_EXPERIMENT_ID=<your-experiment-id> \
+nohup uv run bash dev/run-dev-server.sh > /tmp/mlflow-dev-server.log 2>&1 &
+
+# Monitor the logs
+tail -f /tmp/mlflow-dev-server.log
+```
+
+**Note**: The MLflow server acts as a proxy, forwarding API requests to your Databricks workspace while serving the local React frontend. This allows you to develop and test UI changes against real Databricks data. The uvicorn method bypasses potential issues with the mlflow server CLI not properly recognizing Databricks URIs.
+
+### Start Development Server with SQLite Backend (SQLAlchemy)
+
+To run the MLflow dev server with a local SQLite database:
+
+```bash
+# Kill any existing servers first
+pkill -f "mlflow server" || true; pkill -f "yarn start" || true
+
+# Start with SQLite configuration (for local SQLAlchemy testing)
+MLFLOW_TRACKING_URI=/Users/nikhil.thorat/Code/mlflow-agent/mlflow_data/mlflow.db \
 nohup uv run bash dev/run-dev-server.sh > /tmp/mlflow-dev-server.log 2>&1 &
 
 # Monitor the logs
 tail -f /tmp/mlflow-dev-server.log
 
-# The MLflow server will now proxy tracking and model registry requests to Databricks
-# Access the UI at http://localhost:3000 to see your Databricks experiments and models
+# Access the UI at http://localhost:3000 to see your local experiments
 ```
 
-**Note**: The MLflow server acts as a proxy, forwarding API requests to your Databricks workspace while serving the local React frontend. This allows you to develop and test UI changes against real Databricks data.
+**Note**: This configuration uses a local SQLite database via SQLAlchemy for tracking experiments and runs. This is useful for testing without connecting to an external service.
 
 ## Development Commands
 

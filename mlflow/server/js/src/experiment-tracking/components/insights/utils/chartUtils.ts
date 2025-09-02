@@ -30,13 +30,13 @@ export interface ChartRenderConfig {
 export function getChartRenderConfig(
   hasData: boolean,
   xDomain?: [number | undefined, number | undefined],
-  showXAxisWithoutData: boolean = true
+  showXAxisWithoutData = true
 ): ChartRenderConfig {
   const hasValidDomain = xDomain && xDomain[0] !== undefined && xDomain[1] !== undefined;
   
   return {
     hasData,
-    showChartWithoutData: !hasData && showXAxisWithoutData && hasValidDomain,
+    showChartWithoutData: Boolean(!hasData && showXAxisWithoutData && hasValidDomain),
     noDataMessage: hasData ? undefined : 'No data found for this time range'
   };
 }
@@ -52,34 +52,20 @@ export interface TimeSeriesPoint {
 /**
  * Applies timezone adjustment for day/week time buckets
  * 
- * The backend returns UTC timestamps that represent timezone boundaries.
- * For day/week buckets, we need to adjust them to display correct local dates.
+ * NOTE: The backend now returns properly timezone-aligned timestamps,
+ * so no adjustment is needed. This function is kept for backwards compatibility
+ * but simply returns the points unchanged.
  * 
  * @param points - Array of time series points
  * @param timeBucket - Time bucket granularity
- * @returns Adjusted points with correct timezone display
+ * @returns Points unchanged (server now handles timezone alignment)
  */
 export function adjustTimezoneForTimeBucket<T extends TimeSeriesPoint>(
   points: T[],
   timeBucket: TimeBucket
 ): T[] {
-  if (timeBucket !== 'day' && timeBucket !== 'week') {
-    return points; // No adjustment needed for hourly data
-  }
-  
-  return points.map(point => {
-    const date = new Date(point.timeBucket);
-    
-    // For day/week buckets, adjust the timestamp to show correct local date
-    // The backend returns UTC midnight, but we want to display local midnight
-    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-    date.setTime(date.getTime() + offsetMs);
-    
-    return {
-      ...point,
-      timeBucket: date
-    };
-  });
+  // Server now returns timezone-aligned timestamps, no adjustment needed
+  return points;
 }
 
 /**
@@ -94,7 +80,7 @@ export function adjustTimezoneForTimeBucket<T extends TimeSeriesPoint>(
 export function createEmptyTimeSeriesPoints(
   xDomain: [number, number],
   timeBucket: TimeBucket,
-  defaultValue: number = 0
+  defaultValue = 0
 ): TimeSeriesPoint[] {
   const [startTime, endTime] = xDomain;
   const points: TimeSeriesPoint[] = [];
@@ -102,7 +88,7 @@ export function createEmptyTimeSeriesPoints(
   const startDate = new Date(startTime);
   const endDate = new Date(endTime);
   
-  if (timeBucket === 'HOUR') {
+  if (timeBucket === 'hour') {
     // Create hourly points
     const current = new Date(startDate);
     current.setMinutes(0, 0, 0); // Round to hour
@@ -114,7 +100,7 @@ export function createEmptyTimeSeriesPoints(
       });
       current.setHours(current.getHours() + 1);
     }
-  } else if (timeBucket === 'DAY') {
+  } else if (timeBucket === 'day') {
     // Create daily points
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0); // Round to day
@@ -126,7 +112,7 @@ export function createEmptyTimeSeriesPoints(
       });
       current.setDate(current.getDate() + 1);
     }
-  } else if (timeBucket === 'WEEK') {
+  } else if (timeBucket === 'week') {
     // Create weekly points
     const current = new Date(startDate);
     current.setHours(0, 0, 0, 0);

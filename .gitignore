@@ -122,5 +122,8 @@ a.md
 # Ignore a gunicorn config file
 gunicorn.conf.py
 
-# Ignore claude file
-.claude/
+# Claude scripts directory (for debugging)
+claude_scripts/
+
+# Ignore playwright MCP images.
+.playwright-mcp/

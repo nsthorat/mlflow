@@ -65,6 +65,7 @@ export interface LatencyRequest {
   start_time?: number | null;
   end_time?: number | null;
   time_bucket?: TimeBucket;
+  timezone?: string;
 }
 
 export interface LatencyResponse {
@@ -91,6 +92,7 @@ export interface ErrorRequest {
   start_time?: number | null;
   end_time?: number | null;
   time_bucket?: TimeBucket;
+  timezone?: string;
 }
 
 export interface ErrorResponse {

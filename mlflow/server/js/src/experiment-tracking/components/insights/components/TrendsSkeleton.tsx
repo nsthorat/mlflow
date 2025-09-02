@@ -104,7 +104,7 @@ export const TrendsCardSkeleton = () => {
 /**
  * Skeleton for chart components
  */
-const TrendsChartSkeleton = ({ height = 150 }: { height?: number }) => {
+export const TrendsChartSkeleton = ({ height = 150 }: { height?: number }) => {
   const { theme } = useDesignSystemTheme();
 
   return (

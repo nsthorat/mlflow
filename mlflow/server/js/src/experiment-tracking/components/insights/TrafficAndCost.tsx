@@ -7,7 +7,7 @@ import { InsightsErrorRateCard } from './pages/traffic-and-cost/InsightsErrorRat
 import { InsightsPageBaseProps } from './types/insightsTypes';
 import { INSIGHTS_TRAFFIC_AND_COST_PAGE_VIEW } from './constants/insightsLogging';
 
-interface InsightsPageTrafficAndCostProps extends InsightsPageBaseProps {}
+type InsightsPageTrafficAndCostProps = InsightsPageBaseProps;
 
 export const InsightsPageTrafficAndCost = ({
   experimentId = '',

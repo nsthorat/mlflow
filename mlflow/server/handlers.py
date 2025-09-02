@@ -151,6 +151,9 @@ from mlflow.store.artifact.artifact_repository_registry import get_artifact_repo
 from mlflow.store.db.db_types import DATABASE_ENGINES
 from mlflow.store.model_registry.abstract_store import AbstractStore as AbstractModelRegistryStore
 from mlflow.store.model_registry.rest_store import RestStore as ModelRegistryRestStore
+from mlflow.store.model_registry.databricks_workspace_model_registry_rest_store import (
+    DatabricksWorkspaceModelRegistryRestStore,
+)
 from mlflow.store.tracking.abstract_store import AbstractStore as AbstractTrackingStore
 from mlflow.store.tracking.rest_store import RestStore
 from mlflow.tracing.utils.artifact_utils import (
@@ -196,8 +199,6 @@ class TrackingStoreRegistryWrapper(TrackingStoreRegistry):
         self.register("uc", self._get_databricks_uc_rest_store)
         for scheme in DATABASE_ENGINES:
             self.register(scheme, self._get_sqlalchemy_store)
-        # Add support for Databricks tracking store
-        self.register("databricks", self._get_databricks_rest_store)
         self.register_entrypoints()
 
     @classmethod
@@ -207,14 +208,14 @@ class TrackingStoreRegistryWrapper(TrackingStoreRegistry):
         return FileStore(store_uri, artifact_uri)
     
     @classmethod
-    def _get_databricks_rest_store(cls, store_uri, **_):
+    def _get_databricks_rest_store(cls, store_uri, artifact_uri):
         from functools import partial
         from mlflow.store.tracking.rest_store import RestStore
         from mlflow.utils.databricks_utils import get_databricks_host_creds
         return RestStore(partial(get_databricks_host_creds, store_uri))
     
     @classmethod
-    def _get_databricks_uc_rest_store(cls, store_uri, **_):
+    def _get_databricks_uc_rest_store(cls, store_uri, artifact_uri):
         from functools import partial
         from mlflow.store.tracking.rest_store import RestStore
         from mlflow.utils.databricks_utils import get_databricks_host_creds
@@ -226,10 +227,6 @@ class TrackingStoreRegistryWrapper(TrackingStoreRegistry):
         from mlflow.store.tracking.sqlalchemy_store import SqlAlchemyStore
 
         return SqlAlchemyStore(store_uri, artifact_uri)
-
-    @classmethod
-    def _get_databricks_rest_store(cls, store_uri, artifact_uri):
-        return RestStore(partial(get_databricks_host_creds, store_uri))
 
 
 class ModelRegistryStoreRegistryWrapper(ModelRegistryStoreRegistry):
@@ -258,7 +255,7 @@ class ModelRegistryStoreRegistryWrapper(ModelRegistryStoreRegistry):
 
     @classmethod
     def _get_databricks_rest_store(cls, store_uri):
-        return ModelRegistryRestStore(partial(get_databricks_host_creds, store_uri))
+        return DatabricksWorkspaceModelRegistryRestStore(partial(get_databricks_host_creds, store_uri))
 
     @classmethod
     def _get_databricks_uc_rest_store(cls, store_uri):
@@ -424,7 +421,19 @@ def _get_tracking_store(backend_store_uri=None, default_artifact_root=None):
     if _tracking_store is None:
         store_uri = backend_store_uri or os.environ.get(BACKEND_STORE_URI_ENV_VAR, None)
         artifact_root = default_artifact_root or os.environ.get(ARTIFACT_ROOT_ENV_VAR, None)
+        
+        # Log which store is being used
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Getting tracking store for URI: {store_uri}")
+        logger.info(f"MLFLOW_TRACKING_URI env: {os.environ.get('MLFLOW_TRACKING_URI', 'NOT SET')}")
+        logger.info(f"DATABRICKS_HOST env: {os.environ.get('DATABRICKS_HOST', 'NOT SET')}")
+        
         _tracking_store = _tracking_store_registry.get_store(store_uri, artifact_root)
+        
+        # Log the actual store type
+        logger.info(f"Using tracking store: {type(_tracking_store).__name__}")
+        
         utils.set_tracking_uri(store_uri)
     return _tracking_store
 

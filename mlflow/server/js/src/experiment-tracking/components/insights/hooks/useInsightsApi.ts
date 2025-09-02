@@ -163,29 +163,25 @@ export function useAssessmentDiscovery(
   return useQuery({
     queryKey: ['trace-insights', 'assessments', 'discovery', experimentIds, timeRangeFilters.startTime, timeRangeFilters.endTime],
     queryFn: async () => {
-      console.log('Assessment discovery API call with experiment_ids:', experimentIds);
       const requestData = {
         experiment_ids: experimentIds,
         start_time: timeRangeFilters.startTime,
         end_time: timeRangeFilters.endTime
       };
-      console.log('Assessment discovery request data:', requestData);
       
       const response: any = await postInsightsApi('/quality/assessments/discovery', requestData);
-      console.log('Assessment discovery API response:', response);
       
       // Transform API response from {data: [...]} to {assessments: [...]} format
       // and map field names from API response to expected UI format
       const transformedData = {
         assessments: response.data.map((item: any) => ({
           name: item.assessment_name,
-          data_type: item.assessment_type, // Now properly returns 'boolean', 'pass_fail', 'numeric', or 'string'
+          data_type: item.assessment_type, // Now properly returns 'boolean', 'pass-fail', 'numeric', or 'string'
           source: Array.isArray(item.sources) ? item.sources.join(', ') : item.sources || 'Unknown',
           count: item.trace_count
         }))
       };
       
-      console.log('Transformed assessment data:', transformedData);
       return transformedData;
     },
     enabled: experimentIds.length > 0,
@@ -212,11 +208,12 @@ export function useAssessmentMetrics(
 
 /**
  * Hook for fetching assessment data (simplified)
+ * Automatically includes time range parameters from URL state
  */
 export function useAssessmentData(
   assessmentName: string,
   experimentIds: string[],
-  options?: { refetchInterval?: number },
+  options?: { refetchInterval?: number; enabled?: boolean },
   timeBucket: 'hour' | 'day' | 'week' = 'hour'
 ): UseQueryResult<{
   summary: { 
@@ -235,14 +232,23 @@ export function useAssessmentData(
     p50_value?: number;
   }>;
 }> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  const request = {
+    assessment_name: assessmentName,
+    experiment_ids: experimentIds,
+    time_bucket: timeBucket,
+    start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+    timezone: getUserTimezone(),
+  };
+
+  console.log(`[DEBUG] useAssessmentData request for ${assessmentName}:`, request);
+
   return useQuery({
-    queryKey: ['trace-insights', 'assessments', 'data', assessmentName, experimentIds, timeBucket],
-    queryFn: () => postInsightsApi('/assessments/data', { 
-      assessment_name: assessmentName,
-      experiment_ids: experimentIds,
-      time_bucket: timeBucket,
-    }),
-    enabled: experimentIds.length > 0 && !!assessmentName,
+    queryKey: ['trace-insights', 'assessments', 'data', assessmentName, experimentIds, timeBucket, timeRangeFilters.startTime, timeRangeFilters.endTime],
+    queryFn: () => postInsightsApi('/assessments/data', request),
+    enabled: (options?.enabled !== false) && experimentIds.length > 0 && !!assessmentName,
     refetchInterval: options?.refetchInterval,
     staleTime: 30000,
   });
@@ -256,21 +262,34 @@ export function useAssessmentData(
  * Hook for discovering tools used in traces
  */
 export function useToolDiscovery(
-  request: { experiment_ids: string[]; limit?: number },
+  request: { experiment_ids: string[]; start_time?: number; end_time?: number; limit?: number },
   options?: { enabled?: boolean }
 ): UseQueryResult<{ tools: Array<{ 
-  name: string; 
-  trace_count: number; 
-  invocation_count: number; 
+  tool_name: string; 
+  total_calls: number; 
+  success_count: number;
   error_count: number; 
-  avg_latency_ms?: number | null;
-  p50_latency?: number | null;
-  p90_latency?: number | null;
-  p99_latency?: number | null;
+  error_rate: number;
+  avg_latency_ms: number;
+  p50_latency_ms: number;
+  p90_latency_ms: number;
+  p99_latency_ms: number;
+  first_seen: string;
+  last_seen: string;
 }> }> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  // Use the request time range if provided, otherwise fall back to global time range
+  // Convert time strings to Unix timestamps (milliseconds) like other hooks do
+  const requestWithTimeRange = {
+    ...request,
+    start_time: request.start_time ?? (timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null),
+    end_time: request.end_time ?? (timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null),
+  };
+
   return useQuery({
-    queryKey: ['trace-insights', 'tools', 'discovery', request],
-    queryFn: () => postInsightsApi('/tools/discovery', request),
+    queryKey: ['trace-insights', 'tools', 'discovery', requestWithTimeRange],
+    queryFn: () => postInsightsApi('/tools/discovery', requestWithTimeRange),
     enabled: options?.enabled !== false && request.experiment_ids.length > 0,
     staleTime: 60000,
   });
@@ -280,30 +299,42 @@ export function useToolDiscovery(
  * Hook for fetching detailed tool metrics
  */
 export function useToolMetrics(
-  request: { tool_name?: string; experiment_ids: string[]; time_bucket?: string },
+  baseRequest: { tool_name?: string; experiment_ids: string[]; time_bucket?: string },
   options?: { enabled?: boolean; refetchInterval?: number }
 ): UseQueryResult<{ 
-  data?: {
+  summary?: {
+    avg_latency?: number;
     p50_latency?: number;
     p90_latency?: number; 
     p99_latency?: number;
-    invocation_count?: number;
+    usage_count?: number;
     error_count?: number;
     error_rate?: number;
   };
   time_series: Array<{ 
-    time_bucket: string; 
+    time_bucket: number; 
     count: number; 
     error_count: number; 
+    avg_latency?: number;
     p50_latency?: number;
     p90_latency?: number;
     p99_latency?: number;
   }> 
 }> {
+  const [timeRangeFilters] = useInsightsTimeRange();
+  
+  // Include time range parameters like other hooks do
+  const request = {
+    ...baseRequest,
+    start_time: timeRangeFilters.startTime ? new Date(timeRangeFilters.startTime).getTime() : null,
+    end_time: timeRangeFilters.endTime ? new Date(timeRangeFilters.endTime).getTime() : null,
+    timezone: getUserTimezone(),
+  };
+
   return useQuery({
     queryKey: ['trace-insights', 'tools', 'metrics', request],
     queryFn: () => postInsightsApi('/tools/metrics', request),
-    enabled: options?.enabled !== false && request.experiment_ids.length > 0,
+    enabled: options?.enabled !== false && baseRequest.experiment_ids.length > 0,
     refetchInterval: options?.refetchInterval,
     staleTime: 30000,
   });

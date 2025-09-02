@@ -68,63 +68,41 @@ export const InsightsLatencyCard = ({ experimentId }: InsightsLatencyCardProps) 
   const hasData = latencyData.summary.p50_latency !== null;
 
   // Transform time series data for chart - show all three percentiles
-  // For daily/weekly buckets, adjust timestamps for proper local display
+  // Server now returns timezone-aligned timestamps, no adjustment needed
+  console.log('[DEBUG] Latency Card - Raw time series data:', latencyData.time_series);
+  console.log('[DEBUG] Latency Card - Time bucket type:', timeBucket);
+  console.log('[DEBUG] Latency Card - First few timestamps:', latencyData.time_series.slice(0, 3).map(p => {
+    const date = new Date(p.time_bucket);
+    return {
+      raw: p.time_bucket,
+      utc: date.toISOString(),
+      local: date.toString(),
+      localHour: date.getHours(),
+      localDay: date.getDate(),
+      localDayOfWeek: date.getDay()
+    };
+  }));
+  
   const chartData = [
-    ...latencyData.time_series.map(point => {
-      const date = new Date(point.time_bucket);
-      
-      // For day/week buckets, adjust the timestamp to show correct local date
-      if (timeBucket === 'day' || timeBucket === 'week') {
-        // The backend returns UTC midnight, but we want to display local midnight
-        // Add the timezone offset to compensate
-        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-        date.setTime(date.getTime() + offsetMs);
-      }
-      
-      return {
-        timeBucket: date,
-        value: point.p50_latency || 0,
-        seriesName: 'P50',
-      };
-    }),
-    ...latencyData.time_series.map(point => {
-      const date = new Date(point.time_bucket);
-      
-      // For day/week buckets, adjust the timestamp to show correct local date
-      if (timeBucket === 'day' || timeBucket === 'week') {
-        // The backend returns UTC midnight, but we want to display local midnight
-        // Add the timezone offset to compensate
-        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-        date.setTime(date.getTime() + offsetMs);
-      }
-      
-      return {
-        timeBucket: date,
-        value: point.p90_latency || 0,
-        seriesName: 'P90',
-      };
-    }),
-    ...latencyData.time_series.map(point => {
-      const date = new Date(point.time_bucket);
-      
-      // For day/week buckets, adjust the timestamp to show correct local date
-      if (timeBucket === 'day' || timeBucket === 'week') {
-        // The backend returns UTC midnight, but we want to display local midnight
-        // Add the timezone offset to compensate
-        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-        date.setTime(date.getTime() + offsetMs);
-      }
-      
-      return {
-        timeBucket: date,
-        value: point.p99_latency || 0,
-        seriesName: 'P99',
-      };
-    }),
+    ...latencyData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p50_latency || 0,
+      seriesName: 'P50',
+    })),
+    ...latencyData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p90_latency || 0,
+      seriesName: 'P90',
+    })),
+    ...latencyData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p99_latency || 0,
+      seriesName: 'P99',
+    })),
   ];
 
   // Transform correlations for display
-  const correlations = correlationsData?.data.map(item => ({
+  const correlations = correlationsData?.data?.map(item => ({
     label: `${item.dimension}: ${item.value}`,
     count: item.trace_count,
     npmi: item.npmi_score,

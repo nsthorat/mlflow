@@ -7,15 +7,15 @@
 
 import React, { useState } from 'react';
 import { useDesignSystemTheme, Button, Switch } from '@databricks/design-system';
-import { useNavigate } from 'react-router-dom';
 import { useToolDiscovery, useToolMetrics, useCorrelations } from '../../hooks/useInsightsApi';
 import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
 import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
+import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsBarChart } from '../../components/TrendsBarChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
-import { TrendsCardSkeleton, TrendsEmptyState } from '../../components/TrendsSkeleton';
+import { TrendsCardSkeleton, TrendsChartSkeleton, TrendsEmptyState } from '../../components/TrendsSkeleton';
 import { LatencyValueSelector } from '../../components/LatencyValueSelector';
 import { ExperimentPageTabName } from '../../../../constants';
 import Routes from '../../../../routes';
@@ -35,7 +35,6 @@ const getTraceViewUrl = (experimentId: string | undefined, filter: string) => {
 
 export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
   const { theme } = useDesignSystemTheme();
-  const navigate = useNavigate();
   const [volumeViewMode, setVolumeViewMode] = useState<'traces' | 'invocations'>('invocations');
   const [showAllUsageTools, setShowAllUsageTools] = useState(false);
   const [showAllLatencyTools, setShowAllLatencyTools] = useState(false);
@@ -145,15 +144,15 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                 </div>
                 <div>
                   <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
-                    {toolsData.tools.reduce((sum, t) => sum + t.invocation_count, 0).toLocaleString()}
+                    {toolsData.tools.reduce((sum, t) => sum + t.total_calls, 0).toLocaleString()}
                   </div>
                   <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>Total Invocations</div>
                 </div>
                 <div>
                   <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
-                    {toolsData.tools.reduce((sum, t) => sum + t.trace_count, 0).toLocaleString()}
+                    {toolsData.tools.reduce((sum, t) => sum + t.success_count, 0).toLocaleString()}
                   </div>
-                  <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>Traces with Tools</div>
+                  <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>Successful Calls</div>
                 </div>
               </div>
             }
@@ -165,14 +164,16 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
               {(() => {
                 const sortedTools = toolsData.tools
                   .sort((a, b) => {
-                    const countDiff = b.invocation_count - a.invocation_count;
-                    return countDiff !== 0 ? countDiff : a.name.localeCompare(b.name);
+                    const aCount = a.total_calls;
+                    const bCount = b.total_calls;
+                    const countDiff = bCount - aCount;
+                    return countDiff !== 0 ? countDiff : a.tool_name.localeCompare(b.tool_name);
                   });
                 const displayTools = showAllUsageTools ? sortedTools : sortedTools.slice(0, 5);
-                const maxCount = sortedTools[0]?.invocation_count || 1;
+                const maxCount = sortedTools[0]?.total_calls || 1;
                 
                 return displayTools.map(tool => (
-                <div key={tool.name} css={{ 
+                <div key={tool.tool_name} css={{ 
                   display: 'flex',
                   alignItems: 'center',
                   marginBottom: theme.spacing.xs,
@@ -184,8 +185,8 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                  }} title={tool.name}>
-                    {tool.name}
+                  }} title={tool.tool_name}>
+                    {tool.tool_name}
                   </div>
                   <div css={{ 
                     flex: 1,
@@ -195,13 +196,13 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                     overflow: 'hidden',
                   }}>
                     <div css={{
-                      width: `${(tool.invocation_count / maxCount) * 100}%`,
+                      width: `${(tool.total_calls / maxCount) * 100}%`,
                       height: '100%',
                       background: theme.colors.blue500,
                     }} />
                   </div>
                   <div css={{ marginLeft: theme.spacing.sm, fontSize: '12px', minWidth: '50px', textAlign: 'right' }}>
-                    {tool.invocation_count.toLocaleString()}
+                    {tool.total_calls.toLocaleString()}
                   </div>
                 </div>
                 ));
@@ -209,8 +210,9 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
               
               {toolsData.tools.length > 5 && (
                 <Button
+                  componentId="insights.tools.show-more-usage"
                   type="link"
-                  size="sm"
+                  size="small"
                   css={{ 
                     fontSize: '12px',
                     color: theme.colors.textSecondary,
@@ -232,9 +234,9 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
             subtitle={
               <LatencyValueSelector 
                 latencies={{
-                  p50: overallLatencyData?.data?.p50_latency || fallbackOverallMetrics?.p50_latency || null,
-                  p90: overallLatencyData?.data?.p90_latency || fallbackOverallMetrics?.p90_latency || null,
-                  p99: overallLatencyData?.data?.p99_latency || fallbackOverallMetrics?.p99_latency || null,
+                  p50: overallLatencyData?.summary?.p50_latency || fallbackOverallMetrics?.p50_latency || null,
+                  p90: overallLatencyData?.summary?.p90_latency || fallbackOverallMetrics?.p90_latency || null,
+                  p99: overallLatencyData?.summary?.p99_latency || fallbackOverallMetrics?.p99_latency || null,
                 }}
               />
             }
@@ -244,13 +246,13 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
             {(() => {
               const sortedLatencyTools = toolsData.tools
                 .sort((a, b) => {
-                  const latencyDiff = (b.avg_latency_ms || 0) - (a.avg_latency_ms || 0);
-                  return latencyDiff !== 0 ? latencyDiff : a.name.localeCompare(b.name);
+                  const latencyDiff = b.avg_latency_ms - a.avg_latency_ms;
+                  return latencyDiff !== 0 ? latencyDiff : a.tool_name.localeCompare(b.tool_name);
                 });
               const displayLatencyTools = showAllLatencyTools ? sortedLatencyTools : sortedLatencyTools.slice(0, 5);
               
               return displayLatencyTools.map(tool => (
-              <div key={tool.name} css={{ 
+              <div key={tool.tool_name} css={{ 
                 display: 'flex',
                 alignItems: 'center',
                 marginBottom: theme.spacing.xs,
@@ -262,8 +264,8 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                }} title={tool.name}>
-                  {tool.name}
+                }} title={tool.tool_name}>
+                  {tool.tool_name}
                 </div>
                 <div css={{ 
                   flex: 1,
@@ -273,15 +275,15 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                   overflow: 'hidden',
                 }}>
                   <div css={{
-                    width: `${((tool.avg_latency_ms || 0) / Math.max(...toolsData.tools.map(t => t.avg_latency_ms || 0))) * 100}%`,
+                    width: `${(tool.avg_latency_ms / Math.max(...toolsData.tools.map(t => t.avg_latency_ms))) * 100}%`,
                     height: '100%',
                     background: theme.colors.yellow400,
                   }} />
                 </div>
                 <div css={{ marginLeft: theme.spacing.sm, fontSize: '12px', minWidth: '50px', textAlign: 'right' }}>
-                  {(tool.avg_latency_ms || 0) > 1000 
-                    ? `${((tool.avg_latency_ms || 0) / 1000).toFixed(2)}s`
-                    : `${(tool.avg_latency_ms || 0).toFixed(0)}ms`}
+                  {tool.avg_latency_ms > 1000 
+                    ? `${(tool.avg_latency_ms / 1000).toFixed(2)}s`
+                    : `${tool.avg_latency_ms.toFixed(0)}ms`}
                 </div>
               </div>
               ));
@@ -289,8 +291,9 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
             
             {toolsData.tools.length > 5 && (
               <Button
+                componentId="insights.tools.show-more-latency"
                 type="link"
-                size="sm"
+                size="small"
                 css={{ 
                   marginTop: theme.spacing.sm,
                   fontSize: '12px',
@@ -312,14 +315,14 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
             subtitle={
               <div css={{ fontSize: '18px', fontWeight: 600, color: theme.colors.textValidationDanger }}>
                 {((toolsData.tools.reduce((sum, t) => sum + t.error_count, 0) / 
-                   toolsData.tools.reduce((sum, t) => sum + t.invocation_count, 0)) * 100).toFixed(1)}%
+                   toolsData.tools.reduce((sum, t) => sum + t.total_calls, 0)) * 100).toFixed(1)}%
               </div>
             }
           >
             
             {/* Tool error breakdown */}
             {toolsData.tools.filter(t => t.error_count > 0).slice(0, 5).map(tool => (
-              <div key={tool.name} css={{ 
+              <div key={tool.tool_name} css={{ 
                 display: 'flex',
                 alignItems: 'center',
                 marginBottom: theme.spacing.xs,
@@ -331,8 +334,8 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                }} title={tool.name}>
-                  {tool.name}
+                }} title={tool.tool_name}>
+                  {tool.tool_name}
                 </div>
                 <div css={{ 
                   flex: 1,
@@ -342,13 +345,13 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
                   overflow: 'hidden',
                 }}>
                   <div css={{
-                    width: `${(tool.error_count / tool.invocation_count) * 100}%`,
+                    width: `${(tool.error_count / tool.total_calls) * 100}%`,
                     height: '100%',
                     background: theme.colors.textValidationDanger,
                   }} />
                 </div>
                 <div css={{ marginLeft: theme.spacing.sm, fontSize: '12px', minWidth: '50px', textAlign: 'right' }}>
-                  {((tool.error_count / tool.invocation_count) * 100).toFixed(1)}%
+                  {((tool.error_count / tool.total_calls) * 100).toFixed(1)}%
                 </div>
               </div>
             ))}
@@ -365,8 +368,8 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
       {/* Individual Tool Cards Section - 3 columns per tool */}
       <div css={{ marginTop: theme.spacing.lg }}>
         {toolsData.tools.map((tool, index) => (
-          <div key={tool.name}>
-            <h3>{tool.name}</h3>
+          <div key={tool.tool_name}>
+            <h3>{tool.tool_name}</h3>
             <ToolRow tool={tool} experimentId={experimentId} />
             {index < toolsData.tools.length - 1 && (
               <div css={{ marginBottom: theme.spacing.md }} />
@@ -381,22 +384,27 @@ export const InsightsPageTools = ({ experimentId }: InsightsPageToolsProps) => {
 // Individual Tool Row Component
 interface ToolRowProps {
   tool: {
-    name: string;
-    trace_count: number;
-    invocation_count: number;
+    tool_name: string;
+    total_calls: number;
+    success_count: number;
     error_count: number;
-    avg_latency_ms?: number | null;
-    p50_latency?: number | null;
-    p90_latency?: number | null;
-    p99_latency?: number | null;
+    error_rate: number;
+    avg_latency_ms: number;
+    p50_latency_ms: number;
+    p90_latency_ms: number;
+    p99_latency_ms: number;
+    first_seen: string;
+    last_seen: string;
   };
   experimentId?: string;
 }
 
 const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
   const { theme } = useDesignSystemTheme();
-  const navigate = useNavigate();
   const [volumeViewMode, setVolumeViewMode] = useState<'traces' | 'invocations'>('invocations');
+  
+  // Use intersection observer to detect when tool row is in view
+  const [toolRowRef, isInView] = useIntersectionObserver();
   
   // Get chart time domain from global time range
   const { xDomain } = useInsightsChartTimeRange();
@@ -404,52 +412,41 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
   // Get automatic time bucket based on time range duration  
   const timeBucket = useTimeBucket();
   
-  // Fetch detailed metrics for this tool
+  // Fetch detailed metrics for this tool - only when in view
   const { data: metricsData, isLoading: metricsLoading, error: metricsError } = useToolMetrics(
     {
-      tool_name: tool.name,
+      tool_name: tool.tool_name,
       experiment_ids: experimentId ? [experimentId] : [],
       time_bucket: timeBucket,
     },
-    { refetchInterval: 30000 }
+    { 
+      enabled: isInView // Only fetch when the tool row is in view
+    }
   );
   
-  if (tool.name === 'check_storm_warnings') {
-    console.log(`ToolRow metrics for ${tool.name}:`, {
-      tool_name: tool.name,
-      experimentId,
-      timeBucket,
-      metricsData,
-      metricsLoading,
-      metricsError,
-      hasTimeSeries: metricsData && metricsData.time_series,
-      timeSeriesLength: metricsData?.time_series?.length || 0,
-      timeSeries: metricsData?.time_series,
-      rawChartPoints: metricsData?.time_series?.map(point => ({
-        time_bucket: point.time_bucket,
-        count: point.count,
-        date: new Date(point.time_bucket)
-      }))
-    });
-  }
 
-  // Fetch correlations for tool errors
+  // Fetch correlations for tool errors - only when in view
   const { data: errorCorrelations } = useCorrelations(
     {
       experiment_ids: experimentId ? [experimentId] : [],
-      filter_string: `tool:${tool.name} AND status:error`,
+      filter_string: `tool:${tool.tool_name} AND status:error`,
       correlation_dimensions: ['tag'],
       limit: 5,
     },
-    { enabled: tool.error_count > 0 }
+    { 
+      enabled: tool.error_count > 0 && isInView // Only fetch when in view and has errors
+    }
   );
 
   return (
-    <div css={{ 
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: theme.spacing.lg,
-    }}>
+    <div 
+      ref={toolRowRef}
+      css={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: theme.spacing.lg,
+      }}
+    >
       {/* Volume Column */}
       <InsightsCard
         title="Volume"
@@ -461,48 +458,34 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
           }}>
             <div>
               <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
-                {tool.trace_count}
+                {tool.success_count.toLocaleString()}
               </div>
               <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>
-                Traces
+                Success
               </div>
             </div>
             <div>
               <div css={{ fontSize: '18px', fontWeight: 300, color: '#000' }}>
-                {tool.invocation_count.toLocaleString()}
+                {tool.total_calls.toLocaleString()}
               </div>
               <div css={{ fontSize: '11px', color: theme.colors.textSecondary }}>
-                Invocations
+                Total Calls
               </div>
             </div>
           </div>
         }
       >
-        {metricsData && metricsData.time_series && metricsData.time_series.length > 0 ? (() => {
+        {metricsLoading ? (
+          <TrendsChartSkeleton height={200} />
+        ) : metricsData && metricsData.time_series && metricsData.time_series.length > 0 ? (() => {
           const chartPoints = metricsData.time_series.map(point => {
             const date = new Date(point.time_bucket);
             
-            // For day/week buckets, adjust the timestamp to show correct local date
-            if (timeBucket === 'day' || timeBucket === 'week') {
-              const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-              date.setTime(date.getTime() + offsetMs);
-            }
-            
             return {
               timeBucket: date,
-              value: point.count,
+              value: point.count || 0,
             };
           });
-          
-          if (tool.name === 'check_storm_warnings') {
-            console.log(`TrendsLineChart data for ${tool.name}:`, {
-              rawTimeSeries: metricsData.time_series,
-              processedChartPoints: chartPoints,
-              chartPointsCount: chartPoints.length,
-              nonZeroPoints: chartPoints.filter(p => p.value > 0),
-              totalValueSum: chartPoints.reduce((sum, p) => sum + p.value, 0)
-            });
-          }
           
           return (
             <TrendsLineChart
@@ -515,9 +498,9 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
               timeBucket={timeBucket}
               lineColors={[TRAFFIC_INSIGHTS_COLORS.TRAFFIC]}
               height={200}
-              yAxisOptions={{ dtick: 1 }}
+              yAxisOptions={{ rangemode: 'tozero' }}
               xDomain={xDomain}
-              connectGaps={true}
+              connectGaps
             />
           );
         })() : (
@@ -537,12 +520,12 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
       <InsightsCard
         title="Latency"
         subtitle={
-          (tool.p50_latency || tool.p90_latency || tool.p99_latency) ? (
+          (tool.p50_latency_ms || tool.p90_latency_ms || tool.p99_latency_ms) ? (
             <LatencyValueSelector 
               latencies={{
-                p50: tool.p50_latency,
-                p90: tool.p90_latency,
-                p99: tool.p99_latency,
+                p50: tool.p50_latency_ms,
+                p90: tool.p90_latency_ms,
+                p99: tool.p99_latency_ms,
               }}
             />
           ) : (
@@ -552,17 +535,13 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
           )
         }
       >
-        {metricsData && metricsData.time_series && metricsData.time_series.length > 0 ? (
+        {metricsLoading ? (
+          <TrendsChartSkeleton height={200} />
+        ) : metricsData && metricsData.time_series && metricsData.time_series.length > 0 ? (
           <TrendsLineChart
             points={[
               ...metricsData.time_series.map(point => {
                 const date = new Date(point.time_bucket);
-                
-                // For day/week buckets, adjust the timestamp to show correct local date
-                if (timeBucket === 'day' || timeBucket === 'week') {
-                  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-                  date.setTime(date.getTime() + offsetMs);
-                }
                 
                 return {
                   timeBucket: date,
@@ -573,12 +552,6 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
               ...metricsData.time_series.map(point => {
                 const date = new Date(point.time_bucket);
                 
-                // For day/week buckets, adjust the timestamp to show correct local date
-                if (timeBucket === 'day' || timeBucket === 'week') {
-                  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-                  date.setTime(date.getTime() + offsetMs);
-                }
-                
                 return {
                   timeBucket: date,
                   value: point.p90_latency || 0,
@@ -587,12 +560,6 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
               }),
               ...metricsData.time_series.map(point => {
                 const date = new Date(point.time_bucket);
-                
-                // For day/week buckets, adjust the timestamp to show correct local date
-                if (timeBucket === 'day' || timeBucket === 'week') {
-                  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-                  date.setTime(date.getTime() + offsetMs);
-                }
                 
                 return {
                   timeBucket: date,
@@ -628,13 +595,13 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
       <InsightsCard
         title="Errors"
         subtitle={
-          tool.error_count > 0 ? (
+          (tool.error_count || 0) > 0 ? (
             <div css={{ 
               fontSize: '18px', 
               fontWeight: 300, 
               color: theme.colors.textValidationDanger,
             }}>
-              {((tool.error_count / tool.invocation_count) * 100).toFixed(1)}%
+              {((tool.error_count / tool.total_calls) * 100).toFixed(1)}%
             </div>
           ) : (
             <div css={{ 
@@ -647,22 +614,16 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
           )
         }
       >
-        {tool.error_count > 0 ? (
+        {(tool.error_count || 0) > 0 ? (
           <>
-            {metricsData && (
+            {metricsData && metricsData.time_series && (
               <TrendsLineChart
                 points={metricsData.time_series.map(point => {
                   const date = new Date(point.time_bucket);
                   
-                  // For day/week buckets, adjust the timestamp to show correct local date
-                  if (timeBucket === 'day' || timeBucket === 'week') {
-                    const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-                    date.setTime(date.getTime() + offsetMs);
-                  }
-                  
                   return {
                     timeBucket: date,
-                    value: (point.error_count / point.count) * 100,
+                    value: point.count > 0 ? (point.error_count / point.count) * 100 : 0,
                   };
                 })}
                 yAxisTitle="Error Rate (%)"
@@ -688,7 +649,9 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool, experimentId }) => {
                     percentage: item.percentage_of_slice,
                     type: 'tag' as const,
                   }))}
-                  onItemClick={(item) => console.log('Tool error correlation clicked:', item)}
+                  onItemClick={(item) => {
+                    // TODO: Open trace explorer with filter
+                  }}
                 />
               </div>
             )}

@@ -10,6 +10,7 @@ import { useDesignSystemTheme } from '@databricks/design-system';
 import { useAssessmentDiscovery, useAssessmentData, useCorrelations } from '../../hooks/useInsightsApi';
 import { useInsightsChartTimeRange } from '../../hooks/useInsightsChartTimeRange';
 import { useTimeBucket } from '../../hooks/useAutomaticTimeBucket';
+import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import { InsightsCard } from '../../components/InsightsCard';
 import { TrendsLineChart } from '../../components/TrendsLineChart';
 import { TrendsCorrelationsChart } from '../../components/TrendsCorrelationsChart';
@@ -110,7 +111,7 @@ export const InsightsPageQualityMetrics = ({ experimentId }: InsightsPageQuality
 interface AssessmentCardProps {
   assessment: {
     name: string;
-    data_type: 'boolean' | 'pass_fail' | 'numeric' | 'string';
+    data_type: 'boolean' | 'pass-fail' | 'numeric' | 'string';
     source: string;
     count: number;
   };
@@ -122,14 +123,21 @@ interface AssessmentCardProps {
 const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentId, xDomain, timeBucket }) => {
   const { theme } = useDesignSystemTheme();
   
+  // Use intersection observer to detect when assessment card is in view
+  const [cardRef, isInView] = useIntersectionObserver();
+  
   // Handle experimentId properly - "0" is a valid experiment ID
   const experimentIds = experimentId !== undefined && experimentId !== null ? [experimentId] : [];
   
   // Fetch detailed assessment data with the correct time bucket
+  // Only fetch when the card is in view
   const { data: assessmentData, isLoading } = useAssessmentData(
     assessment.name,
     experimentIds,
-    { refetchInterval: 30000 },
+    { 
+      refetchInterval: 30000,
+      enabled: isInView  // Only fetch when the card is in view
+    },
     timeBucket  // Pass the time bucket to the hook
   );
 
@@ -146,12 +154,17 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
       limit: 5,
     },
     { 
-      enabled: !!assessmentData && assessment.data_type !== 'string',
+      enabled: !!assessmentData && assessment.data_type !== 'string' && isInView,  // Only fetch when in view and has data
     }
   );
 
-  if (isLoading) {
-    return <TrendsCardSkeleton />;
+  // Always show skeleton for cards not in view yet
+  if (!isInView || isLoading) {
+    return (
+      <div ref={cardRef}>
+        <TrendsCardSkeleton />
+      </div>
+    );
   }
 
   // Transform correlations for display
@@ -165,26 +178,16 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
 
 
   // Render based on assessment type
-  if ((assessment.data_type === 'boolean' || assessment.data_type === 'pass_fail') && assessmentData) {
+  if ((assessment.data_type === 'boolean' || assessment.data_type === 'pass-fail') && assessmentData) {
     const failureRate = assessmentData.summary.failure_rate || 0;
-    const chartData = assessmentData.time_series.map(point => {
-      const date = new Date(point.time_bucket);
-      
-      // For day/week buckets, adjust the timestamp to show correct local date
-      // This ensures proper alignment across all insights charts
-      if (timeBucket === 'day' || timeBucket === 'week') {
-        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-        date.setTime(date.getTime() + offsetMs);
-      }
-      
-      return {
-        timeBucket: date,
-        value: point.failure_rate || 0,
-      };
-    });
+    const chartData = assessmentData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: (point.failure_rate || 0) / 100, // Convert to decimal for Plotly percentage format
+    }));
 
     return (
-      <InsightsCard
+      <div ref={cardRef}>
+        <InsightsCard
         title={
           <span>
             {assessment.name}
@@ -231,33 +234,23 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
           height={200}
           xDomain={xDomain}
           yAxisOptions={{
-            range: [0, 1], // Fixed range from 0.0 to 1.0 (0% to 100% when formatted)
-            dtick: 0.2, // Show ticks every 0.2 (20% increments: 0%, 20%, 40%, 60%, 80%, 100%)
+            rangemode: 'tozero', // Always include zero but auto-scale the maximum
           }}
         />
-      </InsightsCard>
+        </InsightsCard>
+      </div>
     );
   }
 
   if (assessment.data_type === 'numeric' && assessmentData) {
-    const chartData = assessmentData.time_series.map(point => {
-      const date = new Date(point.time_bucket);
-      
-      // For day/week buckets, adjust the timestamp to show correct local date
-      // This ensures proper alignment across all insights charts
-      if (timeBucket === 'day' || timeBucket === 'week') {
-        const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-        date.setTime(date.getTime() + offsetMs);
-      }
-      
-      return {
-        timeBucket: date,
-        value: point.p50_value || 0,
-      };
-    });
+    const chartData = assessmentData.time_series.map(point => ({
+      timeBucket: new Date(point.time_bucket),
+      value: point.p50_value || 0,
+    }));
 
     return (
-      <InsightsCard
+      <div ref={cardRef}>
+        <InsightsCard
         title={
           <span>
             {assessment.name}
@@ -300,14 +293,16 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
           height={200}
           xDomain={xDomain}
         />
-      </InsightsCard>
+        </InsightsCard>
+      </div>
     );
   }
 
   // String assessments - not yet supported
   return (
-    <InsightsCard
-      title={
+    <div ref={cardRef}>
+      <InsightsCard
+        title={
         <span>
           {assessment.name}
           <DataTypeTag dataType={assessment.data_type} />
@@ -334,6 +329,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({ assessment, experimentI
         </div>
       </div>
 
-    </InsightsCard>
+      </InsightsCard>
+    </div>
   );
 };

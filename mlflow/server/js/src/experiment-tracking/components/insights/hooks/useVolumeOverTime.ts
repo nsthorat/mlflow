@@ -31,7 +31,7 @@ export interface VolumeOverTimeResponse {
 export const useVolumeOverTime = (
   experimentId: string | undefined,
   timeRange?: { start?: number; end?: number },
-  timeBucket: string = 'hour'
+  timeBucket = 'hour'
 ) => {
   const queryKey = ['insights', 'volume-over-time', experimentId, timeRange, timeBucket];
   

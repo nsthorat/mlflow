@@ -14,6 +14,127 @@ This document defines the technical implementation details for the MLflow Insigh
 
 Use this database when testing and verifying functionality.
 
+## Store Architecture
+
+### Inheritance Hierarchy
+
+The insights functionality is built on top of MLflow's existing tracking store architecture with a clean inheritance hierarchy:
+
+#### Base Classes
+1. **AbstractStore** (`mlflow.store.tracking.abstract_store`)
+   - Base abstract class for all MLflow tracking stores
+   - Defines core tracking operations (experiments, runs, metrics, etc.)
+   - Contains async logging queue initialization
+
+2. **InsightsAbstractStore** (`mlflow.store.tracking.insights_abstract_store`) 
+   - Extends `AbstractStore` and `ABC`
+   - Defines interface for all insights-specific operations
+   - Methods for traffic metrics, assessments, tools, tags, correlations
+   - Inherits all tracking capabilities from AbstractStore
+
+#### Tracking Store Implementations
+3. **SqlAlchemyStore** (`mlflow.store.tracking.sqlalchemy_store`)
+   - Extends `AbstractStore` directly
+   - Uses SQLAlchemy ORM for database operations
+   - Supports SQLite, PostgreSQL, MySQL backends
+
+4. **RestStore** (`mlflow.store.tracking.rest_store`)
+   - Extends `AbstractStore` directly  
+   - Implements operations via REST API calls
+   - Used for remote MLflow server connections
+
+5. **DatabricksSqlStore** (`mlflow.store.tracking.databricks_sql_store`)
+   - Extends `RestStore` (not SqlAlchemyStore)
+   - Adds Databricks-specific functionality
+   - Uses REST API for standard operations
+
+#### Insights Store Implementations
+6. **InsightsSqlAlchemyStore** (`mlflow.store.tracking.insights_sqlalchemy_store`)
+   - Multiple inheritance: `InsightsAbstractStore` + `SqlAlchemyStore`
+   - Method Resolution Order (MRO): InsightsAbstractStore → SqlAlchemyStore → AbstractStore
+   - Implements insights queries using SQLAlchemy
+   - Used for local database backends
+
+7. **InsightsDatabricksSqlStore** (`mlflow.store.tracking.insights_databricks_sql_store`)
+   - Multiple inheritance: `InsightsAbstractStore` + `DatabricksSqlStore`
+   - MRO: InsightsAbstractStore → DatabricksSqlStore → RestStore → AbstractStore
+   - Implements insights queries using Databricks SQL
+   - Used for Databricks backend
+
+### Store Selection Logic
+
+The REST handlers (`mlflow.server.trace_insights.rest_handlers`) select the appropriate store based on environment:
+
+```python
+def _get_insights_store():
+    tracking_uri = os.environ.get('MLFLOW_TRACKING_URI', '')
+    databricks_profile = os.environ.get('DATABRICKS_CONFIG_PROFILE', '')
+    
+    if tracking_uri == 'databricks' or databricks_profile:
+        # Use Databricks SQL insights store
+        return InsightsDatabricksSqlStore('databricks')
+    else:
+        # Use SQLAlchemy insights store for local databases
+        return InsightsSqlAlchemyStore(tracking_uri, default_artifact_root)
+```
+
+### Key Architecture Benefits
+
+1. **Clean Separation**: Insights functionality is cleanly separated from core tracking
+2. **Backend Compatibility**: Works with both local SQL and Databricks backends
+3. **Code Reuse**: Leverages existing store implementations and connections
+4. **Extensibility**: Easy to add new insights operations or backend implementations
+5. **Type Safety**: Abstract base class ensures all implementations provide required methods
+
+## 🚨🚨🚨 CRITICAL: ABSOLUTELY NO DATA MOCKING ALLOWED 🚨🚨🚨
+
+**MANDATORY RULE: YOU MUST NOT EVER MOCK DATA IN THE MLFLOW SERVER**
+
+This is an absolute, non-negotiable requirement:
+
+### ❌ FORBIDDEN PRACTICES (NEVER DO THESE):
+- **NO** hardcoding experiment IDs
+- **NO** mocking assessment names or types
+- **NO** hardcoding tool names
+- **NO** returning fake/stub data
+- **NO** creating placeholder responses
+- **NO** using static test data
+- **NO** bypassing database queries with hardcoded values
+- **NO** returning empty arrays/objects as placeholders
+
+### ✅ REQUIRED APPROACH:
+1. **Always query real data** from the database (SQLAlchemy or Databricks SQL)
+2. **If queries fail**: Debug and fix the underlying issue
+3. **If data doesn't exist**: Return properly formatted empty responses from the database
+4. **If implementation is incomplete**: Alert the user immediately and work on fixing it
+5. **When debugging**: Use actual database queries, never mock data
+
+### WHEN YOU ENCOUNTER ISSUES:
+1. **Debug the actual query** using the debugging tools
+2. **Alert the user** about the specific problem
+3. **Fix the underlying issue** in the store implementation
+4. **Test with real data** from the database
+
+### EXAMPLE OF WHAT NOT TO DO:
+```python
+# ❌ NEVER DO THIS
+def discover_assessments(...):
+    return [
+        {'name': 'relevance_to_query', 'type': 'boolean'},  # FORBIDDEN: Hardcoded data
+        {'name': 'groundedness', 'type': 'boolean'}         # FORBIDDEN: Mock data
+    ]
+
+# ✅ DO THIS INSTEAD
+def discover_assessments(...):
+    # Query the actual database
+    with self.ManagedSessionMaker() as session:
+        assessments = session.query(SqlAssessments)...
+        # Return real data or empty list
+        return [format_assessment(a) for a in assessments]
+```
+
+**VIOLATIONS OF THIS RULE ARE UNACCEPTABLE**. The MLflow server must always work with real data from the configured backend.
+
 ## Technical Implementation
 
 ### Frontend Architecture Philosophy

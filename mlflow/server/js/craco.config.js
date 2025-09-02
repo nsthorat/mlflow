@@ -7,6 +7,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const proxyTarget = process.env.MLFLOW_PROXY;
 const useProxyServer = !!proxyTarget && !process.env.MLFLOW_DEV_PROXY_MODE;
+const useHttps = proxyTarget ? proxyTarget.startsWith('https://') : false;
 
 const isDevserverWebsocketRequest = (request) =>
   request.url === '/ws' && (request.headers.upgrade === 'websocket' || request.headers['sec-websocket-version']);
@@ -184,9 +185,15 @@ module.exports = function () {
       ],
     },
     devServer: {
+      // Always set base configuration
+      host: process.env.HOST || 'localhost',
+      port: parseInt(process.env.PORT || '3000', 10),
+      open: false,
+      
+      // Conditionally add proxy configuration
       ...(useProxyServer && {
         hot: true,
-        https: true,
+        https: useHttps,
         proxy: [
           // Heads up src/setupProxy.js is indirectly referenced by CRA
           // and also defines proxies.
@@ -209,9 +216,6 @@ module.exports = function () {
             },
           },
         ],
-        host: 'localhost',
-        port: 3000,
-        open: false,
       }),
       client: {
         overlay: {

@@ -20,7 +20,8 @@ interface LatencyValueSelectorProps {
 }
 
 const formatLatency = (latencyMs: number | null | undefined): string => {
-  if (!latencyMs || latencyMs === 0) return 'N/A';
+  if (latencyMs === null || latencyMs === undefined) return 'N/A';
+  if (latencyMs === 0) return '<1ms';
   return latencyMs > 1000 
     ? `${(latencyMs / 1000).toFixed(2)}s` 
     : `${latencyMs.toFixed(0)}ms`;

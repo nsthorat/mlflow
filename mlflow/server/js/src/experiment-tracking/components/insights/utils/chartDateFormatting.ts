@@ -20,7 +20,7 @@ export function formatDateLabel(
   bucket: TimeBucket,
   index: number,
   allPoints: DataPoint[],
-  showAllLabels: boolean = false
+  showAllLabels = false
 ): string | null {
   // Skip some labels if we have too many points and showAllLabels is false
   if (!showAllLabels && !shouldShowLabel(index, allPoints.length)) {
@@ -228,8 +228,10 @@ export function getPlotlyTickConfigForRange(
     // Generate a tick for each week in the range
     const currentDate = new Date(startDate);
     currentDate.setHours(0, 0, 0, 0);
-    // Start from beginning of week (Sunday)
-    currentDate.setDate(currentDate.getDate() - currentDate.getDay());
+    // Start from beginning of week (Monday - ISO week standard)
+    const dayOfWeek = currentDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday (0), go back 6 days; otherwise go to Monday
+    currentDate.setDate(currentDate.getDate() + daysToMonday);
     
     while (currentDate <= endDate) {
       const dayRange = Math.abs(differenceInDays(endDate, startDate)) + 1;

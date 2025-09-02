@@ -34,7 +34,6 @@ export const useAutomaticTimeBucket = (): AutomaticTimeBucketResult => {
         estimatedDataPoints: 30, // Rough estimate
         rationale: 'All time range - using daily buckets'
       };
-      console.log('🕒 Automatic Time Bucket:', result);
       return result;
     }
 
@@ -69,7 +68,6 @@ export const useAutomaticTimeBucket = (): AutomaticTimeBucketResult => {
       };
     }
     
-    console.log('🕒 Automatic Time Bucket:', result);
     return result;
   }, [timeRangeFilters]);
 };

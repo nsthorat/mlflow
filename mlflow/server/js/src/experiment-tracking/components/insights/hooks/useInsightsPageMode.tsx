@@ -1,6 +1,6 @@
 import { useSearchParams } from '../../../../common/utils/RoutingUtils';
 
-export type InsightsPageMode = 'traffic' | 'quality' | 'tools' | 'tags' | 'create';
+export type InsightsPageMode = 'traffic' | 'quality' | 'tools' | 'tags';
 
 export const INSIGHTS_SUBPAGE_QUERY_PARAM_KEY = 'insightsSubpage';
 
@@ -17,10 +17,21 @@ export const useInsightsPageMode = (initialMode?: InsightsPageMode): [
 ] => {
   const [params, setParams] = useSearchParams();
 
-  const mode =
-    (params.get(INSIGHTS_SUBPAGE_QUERY_PARAM_KEY) as InsightsPageMode) ||
-    initialMode ||
-    getInsightsPageDefaultMode();
+  // Map URL-friendly names to internal mode names
+  const urlParam = params.get(INSIGHTS_SUBPAGE_QUERY_PARAM_KEY);
+  let mode: InsightsPageMode;
+  
+  if (urlParam === 'traffic-and-cost' || urlParam === 'traffic') {
+    mode = 'traffic';
+  } else if (urlParam === 'quality-metrics' || urlParam === 'quality') {
+    mode = 'quality';
+  } else if (urlParam === 'tools') {
+    mode = 'tools';
+  } else if (urlParam === 'tags') {
+    mode = 'tags';
+  } else {
+    mode = initialMode || getInsightsPageDefaultMode();
+  }
 
   const setMode = (newMode: InsightsPageMode) => {
     setParams(

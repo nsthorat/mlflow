@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useDesignSystemTheme } from '@databricks/design-system';
+import { useDesignSystemTheme, BarChartIcon, PlusMinusSquareIcon, WrenchIcon, TagIcon } from '@databricks/design-system';
 import { InsightsPageTrafficAndCost } from './TrafficAndCost';
 import { InsightsPageQualityMetrics } from './pages/quality-metrics/InsightsPageQualityMetrics';
 import { InsightsPageTools } from './pages/tools/InsightsPageTools';
@@ -22,17 +22,17 @@ interface InsightsViewProps extends InsightsPageBaseProps {
 
 interface NavigationItem {
   id: InsightsPageMode;
-  label: string;
-  icon?: string;
+  title: string;
+  key: string;
+  icon: React.ReactElement;
   implemented: boolean;
 }
 
 const navigationItems: NavigationItem[] = [
-  { id: 'traffic', label: 'Traffic & Cost', icon: '📊', implemented: true },
-  { id: 'quality', label: 'Quality Metrics', icon: '✅', implemented: true },
-  { id: 'tools', label: 'Tools', icon: '🔧', implemented: true },
-  { id: 'tags', label: 'Tags', icon: '🏷️', implemented: true },
-  { id: 'create', label: 'Create View', icon: '➕', implemented: true },
+  { id: 'traffic', title: 'Traffic and cost', key: 'traffic-cost', icon: <BarChartIcon />, implemented: true },
+  { id: 'quality', title: 'Quality metrics', key: 'quality-metrics', icon: <PlusMinusSquareIcon />, implemented: true },
+  { id: 'tools', title: 'Tools', key: 'tools', icon: <WrenchIcon />, implemented: true },
+  { id: 'tags', title: 'Tags', key: 'tags', icon: <TagIcon />, implemented: true },
 ];
 
 const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }) => {
@@ -49,40 +49,6 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }
         return <InsightsPageTools experimentId={experimentId} />;
       case 'tags':
         return <InsightsPageTags experimentId={experimentId} />;
-      case 'create':
-        return (
-          <div style={{ padding: theme.spacing.lg }}>
-            <h2>Create Custom View</h2>
-            <div style={{ marginTop: theme.spacing.md }}>
-              <p style={{ color: theme.colors.textSecondary, marginBottom: theme.spacing.md }}>
-                Create custom views to analyze your traces with personalized metrics and visualizations.
-              </p>
-              <div style={{ 
-                padding: theme.spacing.lg, 
-                border: `2px dashed ${theme.colors.border}`,
-                borderRadius: theme.general.borderRadiusBase,
-                textAlign: 'center',
-                background: theme.colors.backgroundSecondary
-              }}>
-                <p style={{ color: theme.colors.textPlaceholder, fontSize: theme.typography.fontSizeLg }}>
-                  Drag and drop components here to build your custom view
-                </p>
-                <button style={{
-                  marginTop: theme.spacing.md,
-                  padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-                  background: theme.colors.actionPrimaryBackgroundDefault,
-                  color: theme.colors.white,
-                  border: 'none',
-                  borderRadius: theme.general.borderRadiusBase,
-                  cursor: 'pointer',
-                  fontSize: theme.typography.fontSizeBase
-                }}>
-                  + Add Component
-                </button>
-              </div>
-            </div>
-          </div>
-        );
       default:
         return null;
     }
@@ -116,7 +82,7 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }
           css={{
             width: '200px',
             borderRight: `1px solid ${theme.colors.border}`,
-            background: theme.colors.backgroundSecondary,
+            background: theme.colors.backgroundPrimary,
             display: 'flex',
             flexDirection: 'column',
             padding: theme.spacing.sm,
@@ -157,8 +123,8 @@ const InsightsViewImpl: React.FC<InsightsViewProps> = ({ experimentId, subpage }
                 onClick={() => item.implemented && setActivePage(item.id)}
                 disabled={!item.implemented}
               >
-                {item.icon && <span>{item.icon}</span>}
-                <span>{item.label}</span>
+                {item.icon}
+                <span>{item.title}</span>
                 {!item.implemented && (
                   <span
                     css={{

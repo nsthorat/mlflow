@@ -9,7 +9,7 @@ import React from 'react';
 import { useDesignSystemTheme } from '@databricks/design-system';
 
 interface DataTypeTagProps {
-  dataType: 'boolean' | 'pass_fail' | 'numeric' | 'string';
+  dataType: 'boolean' | 'pass-fail' | 'numeric' | 'string';
 }
 
 export const DataTypeTag: React.FC<DataTypeTagProps> = ({ dataType }) => {
@@ -19,19 +19,19 @@ export const DataTypeTag: React.FC<DataTypeTagProps> = ({ dataType }) => {
     switch (type) {
       case 'boolean':
         return theme.colors.tagDefault;
-      case 'pass_fail':
-        return theme.colors.tagGreen;
+      case 'pass-fail':
+        return theme.colors.green400 || theme.colors.tagDefault;
       case 'numeric':
-        return theme.colors.tagBlue;
+        return theme.colors.blue400 || theme.colors.tagDefault;
       case 'string':
-        return theme.colors.tagGray;
+        return theme.colors.grey400 || theme.colors.tagDefault;
       default:
         return theme.colors.tagDefault;
     }
   };
 
   const getDisplayText = (type: string) => {
-    return type === 'pass_fail' ? 'PASS/FAIL' : type.toUpperCase();
+    return type === 'pass-fail' ? 'PASS/FAIL' : type.toUpperCase();
   };
 
   return (

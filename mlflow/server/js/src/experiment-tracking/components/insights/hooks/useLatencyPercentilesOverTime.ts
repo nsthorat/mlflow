@@ -23,7 +23,7 @@ export interface LatencyPercentilesOverTimeResponse {
 export const useLatencyPercentilesOverTime = (
   experimentId: string | undefined,
   timeRange?: { start?: number; end?: number },
-  timeBucket: string = 'hour'
+  timeBucket = 'hour'
 ) => {
   const queryKey = ['insights', 'latency-percentiles', experimentId, timeRange, timeBucket];
   

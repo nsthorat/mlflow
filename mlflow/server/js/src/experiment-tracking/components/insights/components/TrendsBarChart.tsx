@@ -159,7 +159,7 @@ export const TrendsBarChart = ({
               layout={layout}
               config={config}
               style={{ width: '100%' }}
-              useResizeHandler={true}
+              useResizeHandler
             />
           </div>
         )}

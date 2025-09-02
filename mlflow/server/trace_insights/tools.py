@@ -113,9 +113,13 @@ def get_tool_discovery(
         # which may not have a SQLAlchemy model
         
         # Build base SQL query for tools from spans table
+        # Group tools with _{integer} suffixes under the base tool name
         sql = """
         SELECT 
-            s.name as tool_name,
+            CASE 
+                WHEN s.name RLIKE '_[0-9]+$' THEN REGEXP_REPLACE(s.name, '_[0-9]+$', '')
+                ELSE s.name
+            END as tool_name,
             COUNT(DISTINCT s.trace_id) as trace_count,
             COUNT(*) as total_calls,
             SUM(CASE WHEN s.status = 'ERROR' THEN 1 ELSE 0 END) as error_count,
@@ -138,9 +142,12 @@ def get_tool_discovery(
         if end_time:
             sql += f" AND s.start_time_unix_nano <= {end_time * 1000000}"
         
-        # Group by tool name and order by total calls
+        # Group by base tool name and order by total calls
         sql += """
-        GROUP BY s.name
+        GROUP BY CASE 
+            WHEN s.name RLIKE '_[0-9]+$' THEN REGEXP_REPLACE(s.name, '_[0-9]+$', '')
+            ELSE s.name
+        END
         ORDER BY total_calls DESC
         """
         
@@ -154,10 +161,11 @@ def get_tool_discovery(
         tools = []
         for row in rows:
             # Get execution times for percentile calculation
+            # Match all variants of the tool (base_name, base_name_1, base_name_2, etc.)
             percentile_sql = f"""
             SELECT (end_time_unix_nano - start_time_unix_nano) / 1000000.0 as latency_ms
             FROM spans
-            WHERE type = 'TOOL' AND name = :tool_name
+            WHERE type = 'TOOL' AND (name = :tool_name OR name RLIKE CONCAT(:tool_name, '_[0-9]+$'))
             """
             
             if experiment_ids:

@@ -47,28 +47,28 @@ The API is organized into logical namespaces matching the UI sections:
 ### Complete Endpoint List
 
 #### Traffic & Cost Analytics
-- `POST /api/3.0/mlflow/traces/insights/traffic-cost/volume`
-- `POST /api/3.0/mlflow/traces/insights/traffic-cost/latency`
-- `POST /api/3.0/mlflow/traces/insights/traffic-cost/errors`
+- `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume`
+- `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency`
+- `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors`
 
 #### Assessments Analytics
-- `POST /api/3.0/mlflow/traces/insights/assessments/discovery`
-- `POST /api/3.0/mlflow/traces/insights/assessments/metrics`
+- `POST /ajax-api/2.0/mlflow/traces/insights/quality/assessments/discovery`
+- `POST /ajax-api/2.0/mlflow/traces/insights/quality/assessments/metrics`
 
 #### Tools Analytics
-- `POST /api/3.0/mlflow/traces/insights/tools/discovery`
-- `POST /api/3.0/mlflow/traces/insights/tools/metrics`
+- `POST /ajax-api/2.0/mlflow/traces/insights/tools/discovery`
+- `POST /ajax-api/2.0/mlflow/traces/insights/tools/metrics`
 
 #### Tags Analytics
-- `POST /api/3.0/mlflow/traces/insights/tags/discovery`
-- `POST /api/3.0/mlflow/traces/insights/tags/metrics`
+- `POST /ajax-api/2.0/mlflow/traces/insights/tags/discovery`
+- `POST /ajax-api/2.0/mlflow/traces/insights/tags/metrics`
 
 #### Dimensions
-- `POST /api/3.0/mlflow/traces/insights/dimensions/discovery`
-- `POST /api/3.0/mlflow/traces/insights/dimensions/calculate-npmi`
+- `POST /ajax-api/2.0/mlflow/traces/insights/dimensions/discovery`
+- `POST /ajax-api/2.0/mlflow/traces/insights/dimensions/npmi`
 
 #### Correlations (Cross-cutting)
-- `POST /api/3.0/mlflow/traces/insights/correlations`
+- `POST /ajax-api/2.0/mlflow/traces/insights/correlations`
 
 ## Common Request/Response Format
 
@@ -104,7 +104,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. Volume
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/traffic-cost/volume`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/volume`
 
 **Purpose**: Returns trace volume counts with both global totals and time-series data
 
@@ -145,7 +145,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 2. Latency
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/traffic-cost/latency`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/latency`
 
 **Purpose**: Returns latency metrics with both global percentiles and time-series data
 
@@ -191,7 +191,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 3. Errors
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/traffic-cost/errors`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/traffic-cost/errors`
 
 **Purpose**: Returns error statistics with both global totals and time-series data
 
@@ -234,7 +234,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. Assessment Discovery
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/assessments/discovery`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/quality/assessments/discovery`
 
 **Purpose**: Returns all assessments with their data types and basic statistics
 
@@ -275,7 +275,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 2. Assessment Metrics
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/assessments/metrics`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/quality/assessments/metrics`
 
 **Purpose**: Returns detailed metrics for a specific assessment including time series
 
@@ -375,7 +375,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. Tool Discovery
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/tools/discovery`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/tools/discovery`
 
 **Purpose**: Returns all tools with usage and performance statistics
 
@@ -444,7 +444,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 2. Tool Metrics
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/tools/metrics`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/tools/metrics`
 
 **Purpose**: Returns detailed metrics for a specific tool OR overall metrics across all tools
 
@@ -515,7 +515,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. Tag Discovery
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/tags/discovery`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/tags/discovery`
 
 **Purpose**: Returns all tag keys with usage statistics
 
@@ -554,7 +554,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 2. Tag Metrics
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/tags/metrics`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/tags/metrics`
 
 **Purpose**: Returns detailed metrics for a specific tag key including value distribution
 
@@ -601,7 +601,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. Dimensions Discovery
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/dimensions/discovery`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/dimensions/discovery`
 
 **Purpose**: Returns all available dimensions for correlation analysis with their types
 
@@ -720,7 +720,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 2. Calculate NPMI
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/dimensions/calculate-npmi`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/dimensions/npmi`
 
 **Purpose**: Calculates NPMI correlation score between two dimensions
 
@@ -772,7 +772,7 @@ All endpoints return both summary totals and time-series data:
 
 #### 1. NPMI Correlations
 
-**Endpoint**: `POST /api/3.0/mlflow/traces/insights/correlations`
+**Endpoint**: `POST /ajax-api/2.0/mlflow/traces/insights/correlations`
 
 **Purpose**: Returns NPMI correlations for a given filter
 

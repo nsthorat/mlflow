@@ -29,6 +29,7 @@ export interface TrendsLineChartProps {
   leftMargin?: number;
   yAxisOptions?: Partial<Layout['yaxis']>; // Additional y-axis configuration
   connectGaps?: boolean; // Whether to connect lines across missing data points
+  showLegend?: boolean; // Whether to show the legend
 }
 
 export const TrendsLineChart = ({
@@ -65,18 +66,35 @@ export const TrendsLineChart = ({
 
   // Get smart tick configuration for x-axis
   const tickConfig = React.useMemo(() => {
+    let config;
     // Always use xDomain for tick generation when available - this shows x-axis even with no data
     if (xDomain && xDomain[0] && xDomain[1]) {
-      return getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
+      config = getPlotlyTickConfigForRange(xDomain[0], xDomain[1], timeBucket);
     }
-    
     // If no xDomain but have data points, use the data points  
-    if (points.length > 0) {
-      return getPlotlyTickConfig(points, timeBucket);
+    else if (points.length > 0) {
+      config = getPlotlyTickConfig(points, timeBucket);
+    }
+    // No data and no domain - return empty
+    else {
+      config = { ticktext: [], tickvals: [], tickangle: 0 };
     }
     
-    // No data and no domain - return empty
-    return { ticktext: [], tickvals: [], tickangle: 0 };
+    console.log('[DEBUG] TrendsLineChart - Tick Config:', {
+      timeBucket,
+      xDomain,
+      numPoints: points.length,
+      tickvals: config.tickvals,
+      ticktext: config.ticktext,
+      tickangle: config.tickangle,
+      firstFewTicks: config.tickvals?.slice(0, 3)?.map((val, i) => ({
+        val,
+        text: config.ticktext?.[i],
+        date: new Date(val as any).toString()
+      }))
+    });
+    
+    return config;
   }, [points, timeBucket, xDomain]);
 
   // Create Plotly data traces
@@ -161,7 +179,7 @@ export const TrendsLineChart = ({
             layout={layout}
             config={config}
             style={{ width: '100%' }}
-            useResizeHandler={true}
+            useResizeHandler
           />
         </div>
       )}

@@ -15,7 +15,7 @@ export interface InsightsPageBaseProps {
 /**
  * Legacy alias for backward compatibility with copied trends components
  */
-export interface TrendsPageBaseProps extends InsightsPageBaseProps {}
+export type TrendsPageBaseProps = InsightsPageBaseProps
 
 /**
  * Time range configuration for queries
@@ -118,7 +118,7 @@ export type TraceListColumn = 'execution_duration' | 'state' | 'request_time' | 
 /**
  * Time bucket type for aggregating data over time periods
  */
-export type TimeBucket = 'MONTH' | 'WEEK' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND';
+export type TimeBucket = 'hour' | 'day' | 'week';
 
 /**
  * Dimension metadata type for SQL dimension system

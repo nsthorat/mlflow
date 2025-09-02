@@ -288,7 +288,6 @@ const TagCard: React.FC<TagCardProps> = ({ tag, experimentId }) => {
               title={`Correlations for ${tag.key}="${selectedValue}"`}
               data={correlations}
               onItemClick={(item) => {
-                console.log('Tag correlation clicked:', item);
               }}
             />
           ) : (
