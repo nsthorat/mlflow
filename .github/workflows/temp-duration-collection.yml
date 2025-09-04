@@ -1,0 +1,160 @@
+name: Collect Test Durations (Temporary)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'temp-durations-1756955377'
+
+jobs:
+  collect-durations-linux:
+    name: Collect all test durations (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/setup-pyenv
+      - uses: ./.github/actions/setup-java
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      
+      - name: Install ALL dependencies
+        run: |
+          source ./dev/install-common-deps.sh
+          # Install ALL dependencies for comprehensive test coverage - "install the world"
+          uv pip install --system -c requirements/constraints.txt .[extras]
+          uv pip install --system -c requirements/constraints.txt '.[mlserver]' '.[genai]'
+          uv pip install --system -c requirements/constraints.txt tensorflow 'pyspark[connect]' torch transformers
+          uv pip install --system -c requirements/constraints.txt langchain langchain-community langchain-experimental
+          uv pip install --system -c requirements/constraints.txt 'shap<0.47.0' lightgbm xgboost catboost
+          uv pip install --system -c requirements/constraints.txt tf-keras uvicorn 'litellm>=1.52.9'
+          uv pip install --system -c requirements/constraints.txt databricks-agents openai 'optuna>=4'
+          uv pip install --system -c requirements/constraints.txt typing_extensions dspy
+          uv pip install --system -c requirements/constraints.txt 'pydantic<2'  # For pydantic v1 tests
+          # Install test plugin
+          uv pip install --no-deps tests/resources/mlflow-test-plugin
+      
+      - name: Run ALL tests with duration collection
+        run: |
+          # Run complete test suite to get accurate durations
+          pytest --store-durations --durations-path=.test_durations_all.json tests || true
+      
+      - name: Verify duration file exists and show stats
+        if: always()
+        run: |
+          echo "=== Duration file verification ==="
+          if [ -f .test_durations_all.json ]; then
+            echo "✓ Duration file exists"
+            echo "File size: $(ls -lh .test_durations_all.json | awk '{print $5}')"
+            echo "Number of test durations: $(python -c "import json; print(len(json.load(open('.test_durations_all.json'))))")"
+            echo ""
+            echo "=== First 20 lines of duration file ==="
+            head -20 .test_durations_all.json
+            echo ""
+            echo "=== Last 20 lines of duration file ==="
+            tail -20 .test_durations_all.json
+          else
+            echo "ERROR: Duration file .test_durations_all.json not found!"
+            echo "Current directory contents:"
+            ls -la
+          fi
+      
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-durations-linux
+          path: .test_durations_all.json
+          retention-days: 7
+
+  collect-durations-windows:
+    name: Collect all test durations (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python
+      
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          pip install -r requirements/test-requirements.txt
+          pip install .[extras]
+      
+      - name: Run tests with duration collection
+        shell: pwsh
+        run: |
+          pytest --store-durations --durations-path=.test_durations_windows.json tests --ignore-flavors --ignore=tests/projects --ignore=tests/examples --ignore=tests/evaluate --ignore=tests/db
+      
+      - name: Verify duration file exists
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path .test_durations_windows.json) {
+            Write-Host "Duration file exists with size:"
+            Get-ChildItem .test_durations_windows.json
+            Write-Host "First 20 lines:"
+            Get-Content .test_durations_windows.json | Select-Object -First 20
+          } else {
+            Write-Host "ERROR: Duration file not found!"
+            Get-ChildItem
+          }
+      
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-durations-windows
+          path: .test_durations_windows.json
+          retention-days: 7
+
+  merge-durations:
+    needs: [collect-durations-linux, collect-durations-windows]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      
+      - name: Merge duration files
+        run: |
+          python -c "
+import json, glob
+merged = {}
+for f in glob.glob('*/*.json'):
+    try:
+        with open(f) as fp:
+            data = json.load(fp)
+            if isinstance(data, dict):
+                merged.update(data)
+                print(f'Loaded {len(data)} durations from {f}')
+    except Exception as e:
+        print(f'Error loading {f}: {e}')
+        
+with open('all_durations.json', 'w') as fp:
+    json.dump(merged, fp, indent=2, sort_keys=True)
+print(f'Total: {len(merged)} unique test durations')
+"
+      
+      - name: Verify merged duration file
+        if: always()
+        run: |
+          echo "=== Final merged duration file verification ==="
+          if [ -f all_durations.json ]; then
+            echo "✓ Merged duration file exists"
+            echo "File size: $(ls -lh all_durations.json | awk '{print $5}')"
+            echo "Number of test durations: $(python -c "import json; print(len(json.load(open('all_durations.json'))))")"
+            echo ""
+            echo "=== Sample of merged durations (first 30 lines) ==="
+            head -30 all_durations.json
+          else
+            echo "ERROR: Merged file all_durations.json not found!"
+            echo "Directory contents:"
+            ls -la
+            echo ""
+            echo "Artifact directories:"
+            ls -la */
+          fi
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final-test-durations
+          path: all_durations.json
