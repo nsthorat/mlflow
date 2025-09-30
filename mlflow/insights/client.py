@@ -70,7 +70,9 @@ class InsightsClient:
             Run ID of the created analysis run
         """
         # Create nested run under parent
-        run_id = create_nested_analysis_run(self._mlflow_client, experiment_id, run_name)
+        run_id = create_nested_analysis_run(
+            self._mlflow_client, experiment_id, run_name
+        )
 
         try:
             # Create analysis metadata
@@ -90,6 +92,7 @@ class InsightsClient:
         self,
         insights_run_id: str,
         statement: str,
+        rationale: str,
         testing_plan: str,
         evidence: Optional[list[dict]] = None,
     ) -> str:
@@ -99,6 +102,7 @@ class InsightsClient:
         Args:
             insights_run_id: Run ID of the analysis
             statement: The hypothesis being tested
+            description: Detailed description of the hypothesis
             testing_plan: Detailed plan for testing including validation/refutation criteria
             evidence: Optional list of evidence dicts with 'trace_id', 'rationale', 'supports'
 
@@ -119,7 +123,9 @@ class InsightsClient:
                 if not isinstance(ev, dict):
                     raise ValueError(f"Evidence must be a dict, got {type(ev)}")
                 if "trace_id" not in ev or "rationale" not in ev:
-                    raise ValueError("Evidence must have 'trace_id' and 'rationale' fields")
+                    raise ValueError(
+                        "Evidence must have 'trace_id' and 'rationale' fields"
+                    )
                 # Default supports to True if not specified
                 supports = ev.get("supports", True)
                 evidence_entries.append(
@@ -134,6 +140,7 @@ class InsightsClient:
         # Create hypothesis
         hypothesis = Hypothesis(
             statement=statement,
+            rationale=rationale,
             testing_plan=testing_plan,
             evidence=evidence_entries,
         )
@@ -198,7 +205,9 @@ class InsightsClient:
                 if not isinstance(ev, dict):
                     raise ValueError(f"Evidence must be a dict, got {type(ev)}")
                 if "trace_id" not in ev or "rationale" not in ev:
-                    raise ValueError("Evidence must have 'trace_id' and 'rationale' fields")
+                    raise ValueError(
+                        "Evidence must have 'trace_id' and 'rationale' fields"
+                    )
                 evidence_entries.append(
                     EvidenceEntry(
                         trace_id=ev["trace_id"],
@@ -231,6 +240,467 @@ class InsightsClient:
                 pass
 
         return issue.issue_id
+
+    def create_baseline_census(
+        self,
+        insights_run_id: str,
+        table_name: str,
+    ) -> str:
+        """
+        Create a baseline census from trace analysis data.
+
+        Args:
+            insights_run_id: Run ID of the analysis
+            table_name: Name of the trace table to analyze
+
+        Returns:
+            Census filename
+        """
+        # Validate run has analysis
+        if not validate_run_has_analysis(self._mlflow_client, insights_run_id):
+            raise ValueError(
+                f"Run {insights_run_id} does not contain an analysis. Create an analysis first."
+            )
+
+        from mlflow.insights.models import (
+            BaselineCensus,
+            BaselineCensusMetadata,
+            BaselineCensusOperationalMetrics,
+            BaselineCensusQualityMetrics,
+        )
+        from mlflow.store.tracking.insights_databricks_sql_store import (
+            InsightsDatabricksSqlStore,
+        )
+
+        # Initialize the SQL store
+        store = InsightsDatabricksSqlStore("databricks")
+
+        # Collect all the census data by executing SQL queries
+        # 1. Basic counts with sample error trace IDs
+        basic_query = f"""
+        WITH error_traces AS (
+            SELECT
+                trace_id,
+                state,
+                ROW_NUMBER() OVER (ORDER BY trace_id) as rn
+            FROM {table_name}
+            WHERE state = 'ERROR'
+        )
+        SELECT
+            (SELECT COUNT(*) FROM {table_name}) as total_traces,
+            (SELECT SUM(CASE WHEN state = 'OK' THEN 1 ELSE 0 END) FROM {table_name}) as ok_count,
+            (SELECT SUM(CASE WHEN state = 'ERROR' THEN 1 ELSE 0 END) FROM {table_name}) as error_count,
+            (SELECT ROUND(SUM(CASE WHEN state = 'ERROR' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) FROM {table_name}) as error_rate_percentage,
+            collect_list(CASE WHEN rn <= 15 THEN trace_id END) as error_sample_trace_ids
+        FROM error_traces
+        """
+
+        # 2. Latency percentiles
+        latency_query = f"""
+        SELECT
+            percentile(execution_duration_ms, 0.5) as p50_latency_ms,
+            percentile(execution_duration_ms, 0.9) as p90_latency_ms,
+            percentile(execution_duration_ms, 0.95) as p95_latency_ms,
+            percentile(execution_duration_ms, 0.99) as p99_latency_ms,
+            MAX(execution_duration_ms) as max_latency_ms
+        FROM {table_name}
+        WHERE state = 'OK' AND execution_duration_ms IS NOT NULL
+        """
+
+        # 3. Top error spans with sample trace IDs
+        error_query = f"""
+        WITH error_spans_with_traces AS (
+            SELECT
+                span.name as error_span_name,
+                t.trace_id,
+                COUNT(*) OVER (PARTITION BY span.name) as count,
+                ROUND(COUNT(*) OVER (PARTITION BY span.name) * 100.0 / (
+                    SELECT COUNT(*)
+                    FROM {table_name}
+                    LATERAL VIEW explode(spans) AS s
+                    WHERE s.status_code = 'ERROR'
+                ), 2) as percentage_of_errors,
+                ROW_NUMBER() OVER (PARTITION BY span.name ORDER BY t.trace_id) as rn
+            FROM {table_name} t
+            LATERAL VIEW explode(spans) AS span
+            WHERE span.status_code = 'ERROR'
+        ),
+        error_spans_summary AS (
+            SELECT
+                error_span_name,
+                count,
+                percentage_of_errors,
+                collect_list(CASE WHEN rn <= 15 THEN trace_id END) as sample_trace_ids
+            FROM error_spans_with_traces
+            GROUP BY error_span_name, count, percentage_of_errors
+        )
+        SELECT
+            error_span_name,
+            count,
+            percentage_of_errors,
+            sample_trace_ids
+        FROM error_spans_summary
+        ORDER BY count DESC
+        LIMIT 5
+        """
+
+        # 4. Top slow tools with sample trace IDs
+        slow_tools_query = f"""
+        WITH slow_tools_with_traces AS (
+            SELECT
+                span.name as tool_span_name,
+                t.trace_id,
+                (unix_timestamp(span.end_time) - unix_timestamp(span.start_time)) * 1000 as latency_ms,
+                COUNT(*) OVER (PARTITION BY span.name) as count,
+                percentile((unix_timestamp(span.end_time) - unix_timestamp(span.start_time)) * 1000, 0.95) OVER (PARTITION BY span.name) as p95_latency_ms,
+                percentile((unix_timestamp(span.end_time) - unix_timestamp(span.start_time)) * 1000, 0.5) OVER (PARTITION BY span.name) as median_latency_ms,
+                ROW_NUMBER() OVER (PARTITION BY span.name ORDER BY (unix_timestamp(span.end_time) - unix_timestamp(span.start_time)) * 1000 DESC) as rn
+            FROM {table_name} t
+            LATERAL VIEW explode(spans) AS span
+            WHERE span.start_time IS NOT NULL AND span.end_time IS NOT NULL
+        ),
+        slow_tools_summary AS (
+            SELECT
+                tool_span_name,
+                count,
+                p95_latency_ms,
+                median_latency_ms,
+                collect_list(CASE WHEN rn <= 15 THEN trace_id END) as sample_trace_ids
+            FROM slow_tools_with_traces
+            GROUP BY tool_span_name, count, p95_latency_ms, median_latency_ms
+            HAVING count >= 10
+        )
+        SELECT
+            tool_span_name,
+            count,
+            median_latency_ms,
+            p95_latency_ms,
+            sample_trace_ids
+        FROM slow_tools_summary
+        ORDER BY p95_latency_ms DESC
+        LIMIT 5
+        """
+
+        # 5. Time buckets (max 10 buckets with adaptive intervals)
+        time_buckets_query = f"""
+        WITH time_range AS (
+            SELECT
+                MIN(request_time) as min_time,
+                MAX(request_time) as max_time,
+                CAST((UNIX_TIMESTAMP(MAX(request_time)) - UNIX_TIMESTAMP(MIN(request_time))) / 10 AS BIGINT) as bucket_width_seconds
+            FROM {table_name}
+        ),
+        bucketed_data AS (
+            SELECT
+                -- Create bucket number (0-9) based on time position
+                LEAST(9, FLOOR((UNIX_TIMESTAMP(t.request_time) - UNIX_TIMESTAMP(r.min_time)) / GREATEST(1, r.bucket_width_seconds))) as bucket_num,
+                -- Calculate bucket start time
+                FROM_UNIXTIME(
+                    UNIX_TIMESTAMP(r.min_time) +
+                    (LEAST(9, FLOOR((UNIX_TIMESTAMP(t.request_time) - UNIX_TIMESTAMP(r.min_time)) / GREATEST(1, r.bucket_width_seconds))) * r.bucket_width_seconds)
+                ) as time_bucket,
+                t.state,
+                t.execution_duration_ms
+            FROM {table_name} t
+            CROSS JOIN time_range r
+            WHERE t.request_time IS NOT NULL
+        )
+        SELECT
+            time_bucket,
+            COUNT(*) as total_traces,
+            SUM(CASE WHEN state = 'OK' THEN 1 ELSE 0 END) as ok_count,
+            SUM(CASE WHEN state = 'ERROR' THEN 1 ELSE 0 END) as error_count,
+            ROUND(SUM(CASE WHEN state = 'ERROR' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as error_rate_percentage,
+            percentile(execution_duration_ms, 0.95) as p95_latency_ms
+        FROM bucketed_data
+        GROUP BY time_bucket
+        ORDER BY time_bucket
+        """
+
+        # 6. Timestamp range
+        timestamp_query = f"""
+        SELECT
+            MIN(request_time) as first_trace_timestamp,
+            MAX(request_time) as last_trace_timestamp
+        FROM {table_name}
+        """
+
+        # 7. Quality Metrics - Verbosity Analysis
+        verbosity_query = f"""
+        WITH percentile_thresholds AS (
+          SELECT
+            percentile(LENGTH(request), 0.25) as short_input_threshold,
+            percentile(LENGTH(response), 0.90) as verbose_response_threshold
+          FROM {table_name}
+          WHERE state = 'OK'
+        ),
+        shorter_inputs AS (
+          SELECT
+            t.trace_id,
+            LENGTH(t.response) as response_length
+          FROM {table_name} t
+          CROSS JOIN percentile_thresholds p
+          WHERE t.state = 'OK'
+            AND LENGTH(t.request) <= p.short_input_threshold
+        ),
+        verbose_traces AS (
+          SELECT
+            trace_id,
+            response_length > (SELECT verbose_response_threshold FROM percentile_thresholds) as is_verbose
+          FROM shorter_inputs
+        ),
+        limited_samples AS (
+          SELECT
+            trace_id,
+            is_verbose,
+            ROW_NUMBER() OVER (PARTITION BY is_verbose ORDER BY trace_id) as rn
+          FROM verbose_traces
+        )
+        SELECT
+          ROUND(100.0 * SUM(CASE WHEN is_verbose THEN 1 ELSE 0 END) / COUNT(*), 2) as verbose_percentage,
+          collect_list(CASE WHEN is_verbose AND rn <= 15 THEN trace_id END) as sample_trace_ids
+        FROM limited_samples
+        """
+
+        # 8. Quality Metrics - Response Quality Issues (Combined)
+        response_quality_issues_query = f"""
+        WITH quality_issues AS (
+          SELECT
+            trace_id,
+            (response LIKE '%?%' OR
+             LOWER(response) LIKE '%apologize%' OR LOWER(response) LIKE '%sorry%' OR
+             LOWER(response) LIKE '%not sure%' OR LOWER(response) LIKE '%cannot confirm%') as has_quality_issue
+          FROM {table_name}
+          WHERE state = 'OK'
+        ),
+        limited_samples AS (
+          SELECT
+            trace_id,
+            has_quality_issue,
+            ROW_NUMBER() OVER (PARTITION BY has_quality_issue ORDER BY trace_id) as rn
+          FROM quality_issues
+        )
+        SELECT
+          ROUND(100.0 * SUM(CASE WHEN has_quality_issue THEN 1 ELSE 0 END) / COUNT(*), 2) as problematic_response_rate_percentage,
+          collect_list(CASE WHEN has_quality_issue AND rn <= 15 THEN trace_id END) as sample_trace_ids
+        FROM limited_samples
+        """
+
+        # 9. Quality Metrics - Rushed Processing
+        rushed_processing_query = f"""
+        WITH percentile_thresholds AS (
+          SELECT
+            percentile(LENGTH(request), 0.75) as complex_threshold,
+            percentile(execution_duration_ms, 0.10) as fast_threshold
+          FROM {table_name}
+          WHERE state = 'OK' AND execution_duration_ms > 0
+        ),
+        complex_requests AS (
+          SELECT
+            t.trace_id,
+            LENGTH(t.request) > p.complex_threshold as is_complex,
+            t.execution_duration_ms < p.fast_threshold as is_fast
+          FROM {table_name} t
+          CROSS JOIN percentile_thresholds p
+          WHERE t.state = 'OK' AND t.execution_duration_ms > 0
+        ),
+        limited_samples AS (
+          SELECT
+            trace_id,
+            is_complex,
+            is_fast,
+            ROW_NUMBER() OVER (PARTITION BY (is_complex AND is_fast) ORDER BY trace_id) as rn
+          FROM complex_requests
+        )
+        SELECT
+          ROUND(100.0 * SUM(CASE WHEN is_complex AND is_fast THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN is_complex THEN 1 ELSE 0 END), 0), 2) as rushed_complex_pct,
+          collect_list(CASE WHEN is_complex AND is_fast AND rn <= 15 THEN trace_id END) as sample_trace_ids
+        FROM limited_samples
+        """
+
+        # 10. Quality Metrics - Empty/Minimal Responses
+        minimal_responses_query = f"""
+        WITH minimal_check AS (
+          SELECT
+            trace_id,
+            LENGTH(response) < 50 as is_minimal
+          FROM {table_name}
+          WHERE state = 'OK'
+        ),
+        limited_samples AS (
+          SELECT
+            trace_id,
+            is_minimal,
+            ROW_NUMBER() OVER (PARTITION BY is_minimal ORDER BY trace_id) as rn
+          FROM minimal_check
+        )
+        SELECT
+          ROUND(100.0 * SUM(CASE WHEN is_minimal THEN 1 ELSE 0 END) / COUNT(*), 2) as minimal_response_rate,
+          collect_list(CASE WHEN is_minimal AND rn <= 15 THEN trace_id END) as sample_trace_ids
+        FROM limited_samples
+        """
+
+        # Execute queries
+        basic_results = store.execute_sql(basic_query)
+        latency_results = store.execute_sql(latency_query)
+        error_results = store.execute_sql(error_query)
+        slow_tools_results = store.execute_sql(slow_tools_query)
+        time_buckets_results = store.execute_sql(time_buckets_query)
+        timestamp_results = store.execute_sql(timestamp_query)
+        verbosity_results = store.execute_sql(verbosity_query)
+        response_quality_issues_results = store.execute_sql(
+            response_quality_issues_query
+        )
+        rushed_processing_results = store.execute_sql(rushed_processing_query)
+        minimal_responses_results = store.execute_sql(minimal_responses_query)
+
+        # Extract basic metrics
+        basic = basic_results[0] if basic_results else {}
+        latency = latency_results[0] if latency_results else {}
+        timestamps = timestamp_results[0] if timestamp_results else {}
+        verbosity = verbosity_results[0] if verbosity_results else {}
+        response_quality_issues = (
+            response_quality_issues_results[0]
+            if response_quality_issues_results
+            else {}
+        )
+        rushed_processing = (
+            rushed_processing_results[0] if rushed_processing_results else {}
+        )
+        minimal_responses = (
+            minimal_responses_results[0] if minimal_responses_results else {}
+        )
+
+        # Create nested sections
+        metadata_section = BaselineCensusMetadata(
+            table_name=table_name, additional_metadata={}
+        )
+
+        operational_metrics_section = BaselineCensusOperationalMetrics(
+            total_traces=basic.get("total_traces", 0),
+            ok_count=basic.get("ok_count", 0),
+            error_count=basic.get("error_count", 0),
+            error_rate_percentage=basic.get("error_rate_percentage", 0.0),
+            error_sample_trace_ids=basic.get("error_sample_trace_ids", [])[
+                :15
+            ],  # Sample error traces
+            p50_latency_ms=latency.get("p50_latency_ms"),
+            p90_latency_ms=latency.get("p90_latency_ms"),
+            p95_latency_ms=latency.get("p95_latency_ms"),
+            p99_latency_ms=latency.get("p99_latency_ms"),
+            max_latency_ms=latency.get("max_latency_ms"),
+            first_trace_timestamp=timestamps.get("first_trace_timestamp"),
+            last_trace_timestamp=timestamps.get("last_trace_timestamp"),
+            top_error_spans=error_results,
+            top_slow_tools=slow_tools_results,
+            time_buckets=time_buckets_results,
+        )
+
+        quality_metrics_section = BaselineCensusQualityMetrics(
+            verbosity={
+                "description": "Percentage of short inputs (<=P25 request length) that receive verbose responses (>P90 response length)",
+                "value": verbosity.get("verbose_percentage", 0.0),
+                "sample_trace_ids": verbosity.get("sample_trace_ids", [])[
+                    :15
+                ],  # Limit to 15
+            },
+            response_quality_issues={
+                "description": "Percentage of responses containing question marks, apologies ('sorry', 'apologize'), or uncertainty phrases ('not sure', 'cannot confirm')",
+                "value": response_quality_issues.get(
+                    "problematic_response_rate_percentage", 0.0
+                ),
+                "sample_trace_ids": response_quality_issues.get("sample_trace_ids", [])[
+                    :15
+                ],  # Limit to 15
+            },
+            rushed_processing={
+                "description": "Percentage of complex requests (>P75 length) processed faster than typical fast responses (P10 execution time)",
+                "value": rushed_processing.get("rushed_complex_pct", 0.0),
+                "sample_trace_ids": rushed_processing.get("sample_trace_ids", [])[
+                    :15
+                ],  # Limit to 15
+            },
+            minimal_responses={
+                "description": "Percentage of responses shorter than 50 characters, potentially indicating incomplete or minimal responses",
+                "value": minimal_responses.get("minimal_response_rate", 0.0),
+                "sample_trace_ids": minimal_responses.get("sample_trace_ids", [])[
+                    :15
+                ],  # Limit to 15
+            },
+        )
+
+        # Create census object with nested sections
+        census = BaselineCensus(
+            metadata=metadata_section,
+            operational_metrics=operational_metrics_section,
+            quality_metrics=quality_metrics_section,
+        )
+
+        # Save census to YAML with organized sections
+        filename = "baseline_census.yaml"
+        self._save_census_to_yaml(
+            self._mlflow_client, insights_run_id, filename, census
+        )
+
+        return filename
+
+    def _save_census_to_yaml(
+        self, client, run_id: str, filename: str, census: "BaselineCensus"
+    ) -> None:
+        """
+        Save census to YAML with organized sections and comments.
+        Now the sections are preserved in the JSON structure as nested objects.
+        """
+        import os
+        import tempfile
+
+        import yaml
+
+        # Convert census to dict
+        data = census.model_dump(mode="json")
+
+        # Create organized YAML content with section comments
+        yaml_content = "# MLflow Insights Baseline Census\n"
+        yaml_content += f"# Generated: {data['metadata']['created_at']}\n"
+        yaml_content += f"# Source Table: {data['metadata']['table_name']}\n\n"
+
+        # METADATA SECTION
+        yaml_content += "# Information about the census and data source\n"
+        yaml_content += yaml.safe_dump(
+            {"metadata": data["metadata"]}, default_flow_style=False
+        )
+        yaml_content += "\n"
+
+        # OPERATIONAL METRICS SECTION
+        yaml_content += "# System performance, errors, and latency metrics\n"
+        yaml_content += yaml.safe_dump(
+            {"operational_metrics": data["operational_metrics"]},
+            default_flow_style=False,
+        )
+        yaml_content += "\n"
+
+        # QUALITY METRICS SECTION
+        yaml_content += "# Agent response quality analysis\n"
+        yaml_content += yaml.safe_dump(
+            {"quality_metrics": data["quality_metrics"]}, default_flow_style=False
+        )
+
+        # Create temp file and save
+        temp_dir = tempfile.mkdtemp()
+        temp_path = os.path.join(temp_dir, filename)
+
+        try:
+            with open(temp_path, "w") as f:
+                f.write(yaml_content)
+
+            # Log artifact to the insights directory
+            client.log_artifact(run_id, temp_path, "insights")
+        finally:
+            # Clean up temp file and directory
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
 
     # =========================================================================
     # Update Methods
@@ -275,6 +745,7 @@ class InsightsClient:
         insights_run_id: str,
         hypothesis_id: str,
         status: Optional[str] = None,
+        rationale: Optional[str] = None,
         evidence: Optional[list[dict]] = None,
         testing_plan: Optional[str] = None,
     ) -> None:
@@ -285,17 +756,22 @@ class InsightsClient:
             insights_run_id: Run ID containing the hypothesis
             hypothesis_id: Hypothesis ID to update
             status: New status (TESTING, VALIDATED, REJECTED)
+            rationale: New rationale
             evidence: New evidence entries to add
             testing_plan: Updated testing plan
         """
         # Get existing hypothesis
         hypothesis = self.get_hypothesis(insights_run_id, hypothesis_id)
         if not hypothesis:
-            raise ValueError(f"Hypothesis {hypothesis_id} not found in run {insights_run_id}")
+            raise ValueError(
+                f"Hypothesis {hypothesis_id} not found in run {insights_run_id}"
+            )
 
         # Update fields
         if status is not None:
             hypothesis.status = HypothesisStatus(status)
+        if rationale is not None:
+            hypothesis.rationale = rationale
         if testing_plan is not None:
             hypothesis.testing_plan = testing_plan
 
@@ -306,7 +782,9 @@ class InsightsClient:
                 if not isinstance(ev, dict):
                     raise ValueError(f"Evidence must be a dict, got {type(ev)}")
                 if "trace_id" not in ev or "rationale" not in ev:
-                    raise ValueError("Evidence must have 'trace_id' and 'rationale' fields")
+                    raise ValueError(
+                        "Evidence must have 'trace_id' and 'rationale' fields"
+                    )
                 supports = ev.get("supports", True)
                 hypothesis.add_evidence(
                     trace_id=ev["trace_id"],
@@ -378,7 +856,9 @@ class InsightsClient:
                 if not isinstance(ev, dict):
                     raise ValueError(f"Evidence must be a dict, got {type(ev)}")
                 if "trace_id" not in ev or "rationale" not in ev:
-                    raise ValueError("Evidence must have 'trace_id' and 'rationale' fields")
+                    raise ValueError(
+                        "Evidence must have 'trace_id' and 'rationale' fields"
+                    )
                 issue.add_evidence(
                     trace_id=ev["trace_id"],
                     rationale=ev["rationale"],
@@ -422,16 +902,18 @@ class InsightsClient:
                 # Get all hypotheses for this analysis
                 hypotheses = self.list_hypotheses(run.info.run_id)
                 hypothesis_count = len(hypotheses)
-                
+
                 # Count validated hypotheses
-                validated_count = sum(1 for h in hypotheses if h.status == HypothesisStatus.VALIDATED)
+                validated_count = sum(
+                    1 for h in hypotheses if h.status == HypothesisStatus.VALIDATED
+                )
 
                 summary = AnalysisSummary.from_analysis(
-                    run.info.run_id, 
-                    analysis, 
+                    run.info.run_id,
+                    analysis,
                     hypothesis_count,
                     validated_count,
-                    hypotheses
+                    hypotheses,
                 )
                 summaries.append(summary)
 
@@ -448,11 +930,15 @@ class InsightsClient:
             List of hypothesis summaries
         """
         # Get all hypothesis files
-        hypothesis_files = list_yaml_files(self._mlflow_client, insights_run_id, "hypothesis_")
+        hypothesis_files = list_yaml_files(
+            self._mlflow_client, insights_run_id, "hypothesis_"
+        )
 
         summaries = []
         for filename in hypothesis_files:
-            hypothesis = load_from_yaml(self._mlflow_client, insights_run_id, filename, Hypothesis)
+            hypothesis = load_from_yaml(
+                self._mlflow_client, insights_run_id, filename, Hypothesis
+            )
             if hypothesis:
                 summary = HypothesisSummary.from_hypothesis(hypothesis)
                 summaries.append(summary)
@@ -498,9 +984,13 @@ class InsightsClient:
         Returns:
             Analysis object or None if not found
         """
-        return load_from_yaml(self._mlflow_client, insights_run_id, "analysis.yaml", Analysis)
+        return load_from_yaml(
+            self._mlflow_client, insights_run_id, "analysis.yaml", Analysis
+        )
 
-    def get_hypothesis(self, insights_run_id: str, hypothesis_id: str) -> Optional[Hypothesis]:
+    def get_hypothesis(
+        self, insights_run_id: str, hypothesis_id: str
+    ) -> Optional[Hypothesis]:
         """
         Get detailed hypothesis information.
 
@@ -512,7 +1002,9 @@ class InsightsClient:
             Hypothesis object or None if not found
         """
         filename = f"hypothesis_{hypothesis_id}.yaml"
-        return load_from_yaml(self._mlflow_client, insights_run_id, filename, Hypothesis)
+        return load_from_yaml(
+            self._mlflow_client, insights_run_id, filename, Hypothesis
+        )
 
     def get_issue(self, issue_id: str) -> Optional[Issue]:
         """
@@ -549,7 +1041,9 @@ class InsightsClient:
                 if runs:
                     parent_run_id = runs[0].info.run_id
                     filename = f"issue_{issue_id}.yaml"
-                    issue = load_from_yaml(self._mlflow_client, parent_run_id, filename, Issue)
+                    issue = load_from_yaml(
+                        self._mlflow_client, parent_run_id, filename, Issue
+                    )
                     if issue:
                         return issue
             except Exception:
@@ -561,7 +1055,9 @@ class InsightsClient:
     # Preview Methods
     # =========================================================================
 
-    def preview_hypotheses(self, insights_run_id: str, max_traces: int = 100) -> list[Trace]:
+    def preview_hypotheses(
+        self, insights_run_id: str, max_traces: int = 100
+    ) -> list[Trace]:
         """
         Get actual trace objects for all hypotheses in a run.
 
@@ -577,7 +1073,9 @@ class InsightsClient:
         hypotheses = self.list_hypotheses(insights_run_id)
 
         for hypothesis_summary in hypotheses:
-            hypothesis = self.get_hypothesis(insights_run_id, hypothesis_summary.hypothesis_id)
+            hypothesis = self.get_hypothesis(
+                insights_run_id, hypothesis_summary.hypothesis_id
+            )
             if hypothesis:
                 all_trace_ids.update(hypothesis.trace_ids)
 
@@ -596,6 +1094,82 @@ class InsightsClient:
                 continue
 
         return traces
+
+    # =========================================================================
+    # Baseline Census Methods
+    # =========================================================================
+
+    def get_baseline_census(self, insights_run_id: str) -> Optional["BaselineCensus"]:
+        """
+        Get baseline census information from a run.
+
+        Args:
+            insights_run_id: Run ID containing the baseline census
+
+        Returns:
+            BaselineCensus object or None if not found
+        """
+        from mlflow.insights.models import BaselineCensus
+
+        return load_from_yaml(
+            self._mlflow_client, insights_run_id, "baseline_census.yaml", BaselineCensus
+        )
+
+    def update_baseline_census(
+        self,
+        insights_run_id: str,
+        table_name: Optional[str] = None,
+        metadata: Optional[dict] = None,
+        regenerate: bool = False,
+    ) -> str:
+        """
+        Update an existing baseline census.
+
+        Args:
+            insights_run_id: Run ID containing the baseline census
+            table_name: Update the table name for the census
+            metadata: Additional metadata to add/update
+            regenerate: If True, regenerate all census data from the table
+
+        Returns:
+            Census filename
+        """
+        # Validate run has analysis
+        if not validate_run_has_analysis(self._mlflow_client, insights_run_id):
+            raise ValueError(
+                f"Run {insights_run_id} does not contain an analysis. Create an analysis first."
+            )
+
+        if regenerate and table_name:
+            # Regenerate entire census
+            return self.create_baseline_census(insights_run_id, table_name)
+
+        # Load existing census
+        existing_census = self.get_baseline_census(insights_run_id)
+        if not existing_census:
+            raise ValueError(f"No baseline census found in run {insights_run_id}")
+
+        # Update fields
+        updated_census = existing_census.model_copy()
+
+        if table_name:
+            updated_census.table_name = table_name
+
+        if metadata:
+            updated_metadata = updated_census.metadata or {}
+            updated_metadata.update(metadata)
+            updated_census.metadata = updated_metadata
+
+        # Update timestamp
+        from datetime import datetime
+
+        updated_census.created_at = datetime.utcnow()
+
+        # Save updated census
+        filename = "baseline_census.yaml"
+        save_to_yaml(self._mlflow_client, insights_run_id, filename, updated_census)
+
+        return filename
 
     def preview_issues(self, experiment_id: str, max_traces: int = 100) -> list[Trace]:
         """
@@ -634,3 +1208,79 @@ class InsightsClient:
                 continue
 
         return traces
+
+    # =========================================================================
+    # Baseline Census Methods
+    # =========================================================================
+
+    def get_baseline_census(self, insights_run_id: str) -> Optional["BaselineCensus"]:
+        """
+        Get baseline census information from a run.
+
+        Args:
+            insights_run_id: Run ID containing the baseline census
+
+        Returns:
+            BaselineCensus object or None if not found
+        """
+        from mlflow.insights.models import BaselineCensus
+
+        return load_from_yaml(
+            self._mlflow_client, insights_run_id, "baseline_census.yaml", BaselineCensus
+        )
+
+    def update_baseline_census(
+        self,
+        insights_run_id: str,
+        table_name: Optional[str] = None,
+        metadata: Optional[dict] = None,
+        regenerate: bool = False,
+    ) -> str:
+        """
+        Update an existing baseline census.
+
+        Args:
+            insights_run_id: Run ID containing the baseline census
+            table_name: Update the table name for the census
+            metadata: Additional metadata to add/update
+            regenerate: If True, regenerate all census data from the table
+
+        Returns:
+            Census filename
+        """
+        # Validate run has analysis
+        if not validate_run_has_analysis(self._mlflow_client, insights_run_id):
+            raise ValueError(
+                f"Run {insights_run_id} does not contain an analysis. Create an analysis first."
+            )
+
+        if regenerate and table_name:
+            # Regenerate entire census
+            return self.create_baseline_census(insights_run_id, table_name)
+
+        # Load existing census
+        existing_census = self.get_baseline_census(insights_run_id)
+        if not existing_census:
+            raise ValueError(f"No baseline census found in run {insights_run_id}")
+
+        # Update fields
+        updated_census = existing_census.model_copy()
+
+        if table_name:
+            updated_census.table_name = table_name
+
+        if metadata:
+            updated_metadata = updated_census.metadata or {}
+            updated_metadata.update(metadata)
+            updated_census.metadata = updated_metadata
+
+        # Update timestamp
+        from datetime import datetime
+
+        updated_census.created_at = datetime.utcnow()
+
+        # Save updated census
+        filename = "baseline_census.yaml"
+        save_to_yaml(self._mlflow_client, insights_run_id, filename, updated_census)
+
+        return filename
